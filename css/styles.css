@@ -1,0 +1,311 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    overflow: hidden;
+    background-color: #121212;
+    color: #f5f5f5;
+}
+
+button {
+    cursor: pointer;
+    padding: 8px 16px;
+    background-color: #2a2a72;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #3a3a92;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Game Container */
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Loading Screen */
+#loading-screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #121212;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.loading-content h1 {
+    font-size: 32px;
+    margin-bottom: 20px;
+    color: #2a2a72;
+}
+
+.progress-bar {
+    width: 300px;
+    height: 20px;
+    background-color: #2a2a2a;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 20px auto;
+}
+
+.progress {
+    height: 100%;
+    width: 0%;
+    background-color: #2a2a72;
+    transition: width 0.3s;
+}
+
+/* Scene Container */
+#scene-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+/* UI Overlay */
+#ui-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* Stats Panel */
+#stats-panel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 5px;
+    pointer-events: auto;
+}
+
+.stat {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+/* Computer Screen */
+#computer-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 900px;
+    height: 80%;
+    background-color: #f5f5f5;
+    color: #121212;
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.screen-header {
+    background-color: #2a2a72;
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.close-button {
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 24px;
+    width: 24px;
+    text-align: center;
+}
+
+.screen-content {
+    height: calc(100% - 44px);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Main Menu */
+#main-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 200px;
+    margin: 50px auto;
+}
+
+.menu-button {
+    font-size: 16px;
+    padding: 12px 20px;
+}
+
+/* Panels */
+.panel {
+    height: 100%;
+}
+
+.panel h2 {
+    margin-bottom: 20px;
+    color: #2a2a72;
+}
+
+.back-btn {
+    margin-top: 20px;
+    background-color: #555;
+}
+
+/* Projects Panel */
+#projects-list {
+    margin-bottom: 20px;
+}
+
+.project-item {
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+}
+
+.project-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.project-details {
+    font-size: 14px;
+    color: #555;
+}
+
+.project-progress {
+    margin-top: 10px;
+    height: 10px;
+    background-color: #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #2a2a72;
+}
+
+/* Coding Panel */
+#coding-interface {
+    margin: 20px 0;
+}
+
+#prompt-input {
+    width: 100%;
+    height: 150px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: none;
+}
+
+#coding-results {
+    background-color: #e0e0e0;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    min-height: 100px;
+}
+
+/* Research Panel */
+.research-options {
+    display: flex;
+    gap: 20px;
+}
+
+.research-option {
+    flex: 1;
+    background-color: #e0e0e0;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.research-option h3 {
+    margin-bottom: 10px;
+    color: #2a2a72;
+}
+
+.research-option p {
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+/* Skills Panel */
+.skills-list, .upgrades-list {
+    margin-bottom: 20px;
+}
+
+.skill-item, .upgrade-item {
+    background-color: #e0e0e0;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.skill-name, .upgrade-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.skill-level, .upgrade-info {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+/* Notifications */
+#notification-container {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    pointer-events: auto;
+}
+
+.notification {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    animation: fadeIn 0.3s, fadeOut 0.3s 4.7s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+} 

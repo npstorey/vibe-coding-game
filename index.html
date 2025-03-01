@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding Simulator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading-screen">
+            <div class="loading-content">
+                <h1>Vibe Coding Simulator</h1>
+                <p>Loading...</p>
+                <div class="progress-bar">
+                    <div class="progress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="scene-container"></div>
+        
+        <div id="ui-overlay" class="hidden">
+            <div id="stats-panel">
+                <div class="stat">Day: <span id="day-count">1</span></div>
+                <div class="stat">Time Blocks: <span id="time-blocks">8</span></div>
+                <div class="stat">Money: $<span id="money">1000</span></div>
+                <div class="stat">Coding Skill: <span id="coding-skill">1</span></div>
+                <div class="stat">Prompt Skill: <span id="prompt-skill">1</span></div>
+            </div>
+            
+            <div id="computer-screen" class="hidden">
+                <div class="screen-header">
+                    <div class="close-button">×</div>
+                </div>
+                <div class="screen-content">
+                    <div id="main-menu">
+                        <button class="menu-button" data-action="code">Code Project</button>
+                        <button class="menu-button" data-action="research">Research</button>
+                        <button class="menu-button" data-action="projects">Manage Projects</button>
+                        <button class="menu-button" data-action="skills">Skills & Upgrades</button>
+                        <button class="menu-button" data-action="end-day">End Day</button>
+                    </div>
+                    
+                    <div id="projects-panel" class="panel hidden">
+                        <h2>Projects</h2>
+                        <div id="projects-list"></div>
+                        <button id="new-project-btn">Start New Project</button>
+                        <button class="back-btn">Back</button>
+                    </div>
+                    
+                    <div id="coding-panel" class="panel hidden">
+                        <h2>Coding Session</h2>
+                        <div id="current-project-info"></div>
+                        <div id="coding-interface">
+                            <textarea id="prompt-input" placeholder="Write your prompt to the AI..."></textarea>
+                            <button id="submit-prompt-btn">Submit (1 Time Block)</button>
+                        </div>
+                        <div id="coding-results"></div>
+                        <button class="back-btn">Back</button>
+                    </div>
+                    
+                    <div id="research-panel" class="panel hidden">
+                        <h2>Research</h2>
+                        <div class="research-options">
+                            <div class="research-option" data-cost="1">
+                                <h3>Browse Forums</h3>
+                                <p>Look for new prompting techniques (1 Time Block)</p>
+                                <button class="research-btn">Research</button>
+                            </div>
+                            <div class="research-option" data-cost="2">
+                                <h3>Study Documentation</h3>
+                                <p>Improve coding skills (2 Time Blocks)</p>
+                                <button class="research-btn">Research</button>
+                            </div>
+                        </div>
+                        <button class="back-btn">Back</button>
+                    </div>
+                    
+                    <div id="skills-panel" class="panel hidden">
+                        <h2>Skills & Upgrades</h2>
+                        <div class="skills-list"></div>
+                        <div class="upgrades-list"></div>
+                        <button class="back-btn">Back</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="notification-container"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html> 

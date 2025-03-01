@@ -1,0 +1,26 @@
+{
+  "name": "vibe-coding-simulator",
+  "version": "0.1.0",
+  "description": "A simulation game where players use AI-assisted development to build digital products",
+  "main": "index.html",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "game",
+    "simulation",
+    "three.js",
+    "ai",
+    "coding"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.161.0"
+  },
+  "devDependencies": {
+    "vite": "^5.1.3"
+  }
+} 
