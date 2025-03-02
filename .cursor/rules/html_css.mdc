@@ -1,0 +1,7 @@
+---
+description: HTML5 & CSS3 Best Practices
+globs: *.html, *.css
+---
+- Use semantic HTML5 elements for better structure and accessibility.
+- Implement responsive design using CSS Grid and Flexbox.
+- Utilize CSS variables for consistent theming and easy modifications.

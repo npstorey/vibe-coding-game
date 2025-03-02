@@ -1,0 +1,12 @@
+---
+description: JavaScript Best Practices
+globs: *.js, *.jsx
+---
+- Use `const` and `let` for variable declarations; avoid `var`.
+- Prefer arrow functions for concise syntax and lexical `this` binding.
+- Implement `async/await` for handling asynchronous operations.
+- Utilize ES6+ features like destructuring, spread operator, and template literals.
+- Use camelCase for variable and function names.
+- Implement early returns to reduce nesting and improve readability.
+- Use descriptive names for variables, functions, and classes.
+- Implement proper error handling with try-catch blocks.

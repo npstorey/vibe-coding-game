@@ -3,72 +3,52 @@
     {
       "id": "desk",
       "path": "models/office/desk.glb",
-      "scale": 1.0,
-      "position": [0, 0, 0],
-      "rotation": [0, 0, 0]
+      "usePlaceholder": true
     },
     {
       "id": "chair",
       "path": "models/office/chair.glb",
-      "scale": 1.0,
-      "position": [0, 0, 0.5],
-      "rotation": [0, 0, 0]
+      "usePlaceholder": true
     },
     {
       "id": "monitor",
       "path": "models/office/monitor.glb",
-      "scale": 1.0,
-      "position": [0, 0.75, -0.2],
-      "rotation": [0, 0, 0]
+      "usePlaceholder": true
     },
     {
       "id": "keyboard",
       "path": "models/office/keyboard.glb",
-      "scale": 1.0,
-      "position": [0, 0.75, 0.1],
-      "rotation": [0, 0, 0]
+      "usePlaceholder": true
     },
     {
       "id": "mouse",
       "path": "models/office/mouse.glb",
-      "scale": 1.0,
-      "position": [0.4, 0.75, 0.1],
-      "rotation": [0, 0, 0]
+      "usePlaceholder": true
     },
     {
       "id": "lamp",
       "path": "models/office/lamp.glb",
-      "scale": 1.0,
-      "position": [-0.5, 0.75, -0.3],
-      "rotation": [0, 0, 0]
+      "usePlaceholder": true
     },
     {
       "id": "bookshelf",
       "path": "models/office/bookshelf.glb",
-      "scale": 1.0,
-      "position": [-3, 0.75, -4],
-      "rotation": [0, 0.261799, 0]
+      "usePlaceholder": true
     },
     {
       "id": "plant",
       "path": "models/office/plant.glb",
-      "scale": 0.8,
-      "position": [0.5, 0.8, -0.3],
-      "rotation": [0, 0, 0]
+      "usePlaceholder": true
     },
     {
       "id": "coffee_cup",
       "path": "models/office/coffee_cup.glb",
-      "scale": 1.0,
-      "position": [0.3, 0.75, 0.0],
-      "rotation": [0, 0.5, 0]
+      "usePlaceholder": true
     },
     {
       "id": "notebook",
       "path": "models/office/notebook.glb",
-      "scale": 1.0,
-      "position": [-0.3, 0.75, 0.0],
-      "rotation": [0, 0.2, 0]
+      "usePlaceholder": true
     }
   ],
   "textures": [

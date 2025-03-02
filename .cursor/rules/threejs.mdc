@@ -1,0 +1,15 @@
+---
+description: Three.js Guidelines
+globs: *.js, *.jsx
+---
+- Use ES6 modules for importing Three.js and its components.
+- Implement `requestAnimationFrame` for smooth rendering loops.
+- Utilize Three.js's built-in controls like `OrbitControls` for camera manipulation.
+- Optimize 3D models and textures for web performance.
+- Use `Object3D.frustumCulled` for objects that may go out of view.
+- Implement level of detail (LOD) for complex 3D models.
+- Use `THREE.BufferGeometry` instead of `THREE.Geometry` for better performance.
+- Implement object pooling for frequently created and destroyed objects.
+- Use `THREE.Raycaster` for mouse picking in 3D scenes.
+- Implement custom cursors using CSS for different interactions.
+- Use event listeners for mouse movements and clicks.

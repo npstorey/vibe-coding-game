@@ -1,0 +1,7 @@
+---
+description: Vite Configuration
+globs: vite.config.js, vite.config.ts
+---
+- Use Vite's hot module replacement (HMR) for faster development.
+- Leverage Vite's built-in optimizations for production builds.
+- Utilize Vite plugins for additional functionality and optimizations.

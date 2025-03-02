@@ -391,4 +391,54 @@ export class AnimationManager {
             this.animations.splice(index, 1);
         }
     }
+    
+    /**
+     * Register a pulsating effect animation for an object
+     * 
+     * @param {THREE.Object3D} object - The object to animate
+     * @param {number} intensity - How much the object scales
+     * @param {number} speed - Speed of the pulsation
+     * @returns {Object|null} - The animation object or null if object is undefined
+     */
+    registerPulsatingEffect(object, intensity = 0.05, speed = 1) {
+        if (!object) {
+            console.warn("Attempted to register pulsating effect on undefined object");
+            return null;
+        }
+        
+        return this.addBreathingAnimation(object, { 
+            speed: speed,
+            intensity: intensity
+        });
+    }
+    
+    /**
+     * Enhance the pulsating effect for an object (make it more noticeable)
+     * 
+     * @param {THREE.Object3D} object - The object to animate
+     * @param {number} intensity - How much the object scales
+     * @param {number} speed - Speed of the pulsation
+     * @returns {Object|null} - The animation object or null if object is undefined
+     */
+    enhancePulsatingEffect(object, intensity = 0.1, speed = 2) {
+        if (!object) {
+            console.warn("Attempted to enhance pulsating effect on undefined object");
+            return null;
+        }
+        
+        // First find and remove any existing breathing animations for this object
+        const existingAnimations = this.animations.filter(
+            anim => anim.object === object && anim.type === 'breathing'
+        );
+        
+        for (const anim of existingAnimations) {
+            this.removeAnimation(anim);
+        }
+        
+        // Add a new, more pronounced effect
+        return this.addBreathingAnimation(object, { 
+            speed: speed,
+            intensity: intensity
+        });
+    }
 } 

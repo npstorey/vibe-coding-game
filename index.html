@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Coding Simulator</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/fallback.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="game-container">
@@ -31,58 +33,280 @@
             
             <div id="computer-screen" class="hidden">
                 <div class="screen-header">
-                    <div class="close-button">×</div>
+                    <div class="close-button" id="close-computer-btn">×</div>
                 </div>
                 <div class="screen-content">
                     <div id="main-menu">
-                        <button class="menu-button" data-action="code">Code Project</button>
-                        <button class="menu-button" data-action="research">Research</button>
-                        <button class="menu-button" data-action="projects">Manage Projects</button>
-                        <button class="menu-button" data-action="skills">Skills & Upgrades</button>
-                        <button class="menu-button" data-action="end-day">End Day</button>
+                        <button class="menu-button" data-action="code" id="code-btn">
+                            <span class="menu-icon">💻</span>
+                            Code Sprint
+                        </button>
+                        <button class="menu-button" data-action="email" id="email-btn">
+                            <span class="menu-icon">📧</span>
+                            Check Email
+                        </button>
+                        <button class="menu-button" data-action="social" id="social-btn">
+                            <span class="menu-icon">🌐</span>
+                            Scroll Social Media
+                        </button>
+                        <button class="menu-button" data-action="shop" id="shop-btn">
+                            <span class="menu-icon">🛒</span>
+                            Buy Stuff
+                        </button>
+                        <button class="menu-button" data-action="resources" id="resources-btn">
+                            <span class="menu-icon">📦</span>
+                            My Resources
+                        </button>
+                        <button class="menu-button" data-action="end-day" id="end-day-btn">
+                            <span class="menu-icon">🌙</span>
+                            End Day
+                        </button>
                     </div>
                     
                     <div id="projects-panel" class="panel hidden">
-                        <h2>Projects</h2>
-                        <div id="projects-list"></div>
-                        <button id="new-project-btn">Start New Project</button>
-                        <button class="back-btn">Back</button>
+                        <h2>Projects <span class="subtext">Manage your coding contracts</span></h2>
+                        
+                        <div class="projects-content">
+                            <div class="active-projects-section">
+                                <h3>Active Projects</h3>
+                                <div id="active-projects-list">
+                                    <!-- Active projects will be displayed here -->
+                                    <p class="empty-state">No active projects. Check the job board to find new opportunities.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="job-board-section">
+                                <h3>Job Board <span class="subtext">Available Opportunities</span></h3>
+                                <div id="job-board-list">
+                                    <!-- Available projects will be displayed here -->
+                                    <p class="empty-state">No available projects. Check your email or come back tomorrow.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="completed-projects-section">
+                                <h3>Completed Projects</h3>
+                                <div id="completed-projects-list">
+                                    <!-- Completed projects will be displayed here -->
+                                    <p class="empty-state">No completed projects yet.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="back-btn" id="projects-back-btn">Back</button>
                     </div>
                     
                     <div id="coding-panel" class="panel hidden">
-                        <h2>Coding Session</h2>
+                        <h2>Coding Session <span class="subtext">AI-assisted development</span></h2>
                         <div id="current-project-info"></div>
                         <div id="coding-interface">
-                            <textarea id="prompt-input" placeholder="Write your prompt to the AI..."></textarea>
-                            <button id="submit-prompt-btn">Submit (1 Time Block)</button>
+                            <div class="project-selection">
+                                <label for="project-select">Select Project:</label>
+                                <select id="project-select"></select>
+                            </div>
+                            <div class="prompt-input-wrapper">
+                                <div class="setup-section">
+                                    <div class="setup-row">
+                                        <label for="ai-model-select">AI Model:</label>
+                                        <select id="ai-model-select"></select>
+                                    </div>
+                                    <div class="setup-row">
+                                        <label for="prompt-technique-select">Prompt Technique:</label>
+                                        <select id="prompt-technique-select"></select>
+                                    </div>
+                                </div>
+                                <div class="prompt-input-section">
+                                    <label for="prompt-input">Write your prompt to the AI:</label>
+                                    <textarea id="prompt-input" placeholder="Be specific about what you want the AI to code... The more detailed your prompt, the better the results will be."></textarea>
+                                </div>
+                                <button id="submit-prompt-btn">Execute Prompt <span class="cost-indicator">(1 Time Block)</span></button>
+                            </div>
+                            <div id="prompt-library-section">
+                                <h3>Prompt Library</h3>
+                                <div id="prompt-library-list">
+                                    <p class="empty-state">Complete projects to earn prompt templates!</p>
+                                </div>
+                            </div>
                         </div>
-                        <div id="coding-results"></div>
-                        <button class="back-btn">Back</button>
+                        <div id="coding-results">
+                            <!-- AI responses and results will appear here -->
+                        </div>
+                        <button class="back-btn" id="coding-back-btn">Back</button>
                     </div>
                     
                     <div id="research-panel" class="panel hidden">
-                        <h2>Research</h2>
+                        <h2>Research <span class="subtext">Expand your knowledge</span></h2>
                         <div class="research-options">
                             <div class="research-option" data-cost="1">
+                                <div class="research-icon">🌐</div>
                                 <h3>Browse Forums</h3>
-                                <p>Look for new prompting techniques (1 Time Block)</p>
-                                <button class="research-btn">Research</button>
+                                <p>Look for new prompting techniques</p>
+                                <div class="cost-tag">1 Time Block</div>
+                                <button class="research-btn action-button">Research</button>
                             </div>
                             <div class="research-option" data-cost="2">
+                                <div class="research-icon">📚</div>
                                 <h3>Study Documentation</h3>
-                                <p>Improve coding skills (2 Time Blocks)</p>
-                                <button class="research-btn">Research</button>
+                                <p>Improve coding skills</p>
+                                <div class="cost-tag">2 Time Blocks</div>
+                                <button class="research-btn action-button">Research</button>
                             </div>
                         </div>
-                        <button class="back-btn">Back</button>
+                        <button class="back-btn" id="research-back-btn">Back</button>
+                    </div>
+                    
+                    <div id="email-panel" class="panel hidden">
+                        <h2>Inbox <span class="subtext">Opportunities and updates</span></h2>
+                        <div id="email-list"></div>
+                        <div id="email-content" class="hidden">
+                            <div class="email-header">
+                                <h3 id="email-subject"></h3>
+                                <p id="email-sender"></p>
+                                <p id="email-date"></p>
+                            </div>
+                            <div id="email-body"></div>
+                            <button id="email-close-btn" class="action-button">Close Email</button>
+                        </div>
+                        <button class="back-btn" id="email-back-btn">Back</button>
+                    </div>
+                    
+                    <!-- Social Media Panel -->
+                    <div id="social-panel" class="panel hidden">
+                        <h2>Social Media <span class="subtext">Discover trends and prompts</span></h2>
+                        <div class="social-feed">
+                            <div id="social-posts-list">
+                                <!-- Social media posts will be generated here -->
+                            </div>
+                            <div class="scroll-action">
+                                <p class="cost-indicator">Costs 1 Time Block</p>
+                                <button id="scroll-social-btn" class="action-button">Scroll Feed</button>
+                            </div>
+                        </div>
+                        <button class="back-btn" id="social-back-btn">Back</button>
+                    </div>
+                    
+                    <!-- Shop Panel -->
+                    <div id="shop-panel" class="panel hidden">
+                        <h2>Shop <span class="subtext">Upgrade your tech</span></h2>
+                        <div class="shop-tabs">
+                            <button class="shop-tab active" data-tab="hardware">Hardware</button>
+                            <button class="shop-tab" data-tab="ai-models">AI Models</button>
+                            <button class="shop-tab" data-tab="prompts">Premium Prompts</button>
+                            <button class="shop-tab" data-tab="cloud">Cloud Credits</button>
+                        </div>
+                        <div class="shop-content">
+                            <div id="shop-hardware" class="shop-section active">
+                                <div class="shop-items-list" id="hardware-shop-list">
+                                    <!-- Hardware items will be loaded here -->
+                                </div>
+                            </div>
+                            <div id="shop-ai-models" class="shop-section hidden">
+                                <div class="shop-items-list" id="ai-models-shop-list">
+                                    <!-- AI model items will be loaded here -->
+                                </div>
+                            </div>
+                            <div id="shop-prompts" class="shop-section hidden">
+                                <div class="shop-items-list" id="prompts-shop-list">
+                                    <!-- Premium prompt items will be loaded here -->
+                                </div>
+                            </div>
+                            <div id="shop-cloud" class="shop-section hidden">
+                                <div class="shop-cloud-packages">
+                                    <div class="cloud-package">
+                                        <h3>Basic Package</h3>
+                                        <p class="package-credits">100 Credits</p>
+                                        <p class="package-price">$200</p>
+                                        <button class="buy-cloud-btn" data-amount="100" data-price="200">Purchase</button>
+                                    </div>
+                                    <div class="cloud-package">
+                                        <h3>Standard Package</h3>
+                                        <p class="package-credits">300 Credits</p>
+                                        <p class="package-price">$500</p>
+                                        <button class="buy-cloud-btn" data-amount="300" data-price="500">Purchase</button>
+                                    </div>
+                                    <div class="cloud-package">
+                                        <h3>Professional Package</h3>
+                                        <p class="package-credits">1000 Credits</p>
+                                        <p class="package-price">$1500</p>
+                                        <button class="buy-cloud-btn" data-amount="1000" data-price="1500">Purchase</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="back-btn" id="shop-back-btn">Back</button>
                     </div>
                     
                     <div id="skills-panel" class="panel hidden">
-                        <h2>Skills & Upgrades</h2>
-                        <div class="skills-list"></div>
+                        <h2>Skills & Upgrades <span class="subtext">Your developer journey</span></h2>
+                        <div class="skills-container">
+                            <div class="skills-list"></div>
+                            <div class="skill-visualization">
+                                <!-- Skill level visualization will go here -->
+                            </div>
+                        </div>
+                        <h3 class="section-title">Available Upgrades</h3>
                         <div class="upgrades-list"></div>
-                        <button class="back-btn">Back</button>
+                        <button class="back-btn" id="skills-back-btn">Back</button>
                     </div>
+                    
+                    <!-- Resource Collection Page -->
+                    <div id="resources-panel" class="panel hidden">
+                        <h2>My Resources <span class="subtext">Inventory & Collection</span></h2>
+                        
+                        <div class="resources-grid">
+                            <!-- Financial Resources Section -->
+                            <div class="resource-section">
+                                <h3>Financial Resources</h3>
+                                <div class="resource-card finance-card">
+                                    <div class="resource-icon">💰</div>
+                                    <div class="resource-details">
+                                        <div class="resource-name">Cash Balance</div>
+                                        <div class="resource-value">$<span id="resources-money">0</span></div>
+                                    </div>
+                                </div>
+                                <div class="resource-card finance-card">
+                                    <div class="resource-icon">☁️</div>
+                                    <div class="resource-details">
+                                        <div class="resource-name">Cloud Credits</div>
+                                        <div class="resource-value"><span id="resources-cloud-credits">0</span> credits</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Hardware Inventory Section -->
+                            <div class="resource-section">
+                                <h3>Hardware Inventory</h3>
+                                <div id="hardware-inventory-list" class="resource-list">
+                                    <!-- Hardware items will be added here dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- AI Models Section -->
+                            <div class="resource-section">
+                                <h3>AI Models</h3>
+                                <div id="ai-models-list" class="resource-list">
+                                    <!-- AI models will be added here dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Prompt Collection Section -->
+                            <div class="resource-section full-width">
+                                <h3>Prompt Collection</h3>
+                                <div id="prompt-collection-list" class="resource-list">
+                                    <!-- Prompts will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="back-btn" id="resources-back-btn">Back</button>
+                    </div>
+                </div>
+                
+                <!-- Ambient background elements -->
+                <div class="ambient-container">
+                    <div class="ambient-line line1"></div>
+                    <div class="ambient-line line2"></div>
+                    <div class="ambient-line line3"></div>
+                    <div class="ambient-particles"></div>
                 </div>
             </div>
             
@@ -90,7 +314,22 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Direct interaction script for immediate handling - REPLACE WITH PROGRAMMATIC EVENTS -->
+    <script>
+    /* 
+     * This script has been disabled to avoid CSP violations.
+     * All functionality has been moved to js/main.js in the initializeUI method.
+     * Using inline event handlers with eval() can cause CSP issues.
+     */
+    </script>
+
+    <!-- Fallback script that runs if main app fails to load -->
+    <script src="js/fallback.js"></script>
+    
+    <!-- Main application script -->
     <script type="module" src="js/main.js"></script>
+    
+    <!-- Computer clickability fix script -->
+    <script src="js/fix-computer.js"></script>
 </body>
 </html> 

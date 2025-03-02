@@ -24,6 +24,9 @@ export class AssetLoader {
         this.totalAssets = 0;
         this.loadedAssets = 0;
         this.onProgressCallback = onProgressCallback || (() => {});
+        
+        // Models storage
+        this.models = {};
     }
     
     /**
@@ -136,6 +139,29 @@ export class AssetLoader {
      * @returns {THREE.Mesh} - The created placeholder mesh
      */
     createPlaceholder(type) {
+        console.log(`Creating placeholder for: ${type}`);
+        
+        // For numeric IDs, convert to a known type if possible
+        if (typeof type === 'number' || !isNaN(parseInt(type))) {
+            const typeMap = {
+                0: 'desk',
+                1: 'chair',
+                2: 'monitor',
+                3: 'keyboard',
+                4: 'mouse',
+                5: 'lamp',
+                6: 'bookshelf',
+                7: 'plant',
+                8: 'mug', // Based on coffee_cup
+                9: 'notebook'
+            };
+            
+            if (typeMap[type]) {
+                type = typeMap[type];
+                console.log(`Mapped numeric type ${type} to ${typeMap[type]}`);
+            }
+        }
+        
         switch (type) {
             case 'desk':
                 const deskGeometry = new THREE.BoxGeometry(1.5, 0.05, 0.8);
@@ -184,6 +210,7 @@ export class AssetLoader {
                 return chairGroup;
                 
             case 'monitor':
+            case 'computer':
                 const monitorGroup = new THREE.Group();
                 
                 // Monitor base
@@ -212,9 +239,18 @@ export class AssetLoader {
                 const screenMaterial = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
                 const screen = new THREE.Mesh(screenGeometry, screenMaterial);
                 screen.position.set(0, 0.32, 0.011);
+                
+                // Set userData for interactivity on the screen and group
+                screen.userData.objectType = 'computer';
+                screen.userData.isInteractive = true;
                 screen.userData.clickable = true;
+                
+                monitorGroup.userData.objectType = 'computer';
+                monitorGroup.userData.isInteractive = true;
+                
                 monitorGroup.add(screen);
                 
+                console.log("Created computer placeholder with interactivity data", monitorGroup.userData);
                 return monitorGroup;
                 
             case 'keyboard':
@@ -335,197 +371,141 @@ export class AssetLoader {
                 
                 return shelfGroup;
                 
+            case 'plant':
+                // Simple plant placeholder
+                const plantGroup = new THREE.Group();
+                
+                // Pot
+                const potGeometry = new THREE.CylinderGeometry(0.1, 0.08, 0.12, 16);
+                const potMaterial = new THREE.MeshStandardMaterial({ color: 0x8D6E63 });
+                const pot = new THREE.Mesh(potGeometry, potMaterial);
+                plantGroup.add(pot);
+                
+                // Plant/Leaves (simplified as spheres)
+                const leafGeometry = new THREE.SphereGeometry(0.15, 16, 8);
+                const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
+                const leaves = new THREE.Mesh(leafGeometry, leafMaterial);
+                leaves.position.y = 0.15;
+                plantGroup.add(leaves);
+                
+                return plantGroup;
+                
+            case 'mug':
+            case 'coffee_cup':
+                // Simple mug placeholder
+                const mugGroup = new THREE.Group();
+                
+                // Cup
+                const cupGeometry = new THREE.CylinderGeometry(0.04, 0.03, 0.08, 16);
+                const cupMaterial = new THREE.MeshStandardMaterial({ color: 0xFAFAFA });
+                const cup = new THREE.Mesh(cupGeometry, cupMaterial);
+                mugGroup.add(cup);
+                
+                // Handle
+                const handleTorus = new THREE.TorusGeometry(0.02, 0.005, 8, 16, Math.PI);
+                const handleMaterial = new THREE.MeshStandardMaterial({ color: 0xFAFAFA });
+                const handle = new THREE.Mesh(handleTorus, handleMaterial);
+                handle.rotation.y = Math.PI / 2;
+                handle.position.set(0.04, 0, 0);
+                mugGroup.add(handle);
+                
+                // Coffee (inside the cup)
+                const coffeeGeometry = new THREE.CylinderGeometry(0.035, 0.025, 0.01, 16);
+                const coffeeMaterial = new THREE.MeshStandardMaterial({ color: 0x3E2723 });
+                const coffee = new THREE.Mesh(coffeeGeometry, coffeeMaterial);
+                coffee.position.y = 0.035;
+                mugGroup.add(coffee);
+                
+                return mugGroup;
+                
+            case 'notebook':
+                // Simple notebook placeholder
+                const notebookGroup = new THREE.Group();
+                
+                // Base
+                const notebookGeometry = new THREE.BoxGeometry(0.2, 0.01, 0.15);
+                const notebookMaterial = new THREE.MeshStandardMaterial({ color: 0x2196F3 });
+                const notebook = new THREE.Mesh(notebookGeometry, notebookMaterial);
+                notebookGroup.add(notebook);
+                
+                // Pages (white top)
+                const pagesGeometry = new THREE.BoxGeometry(0.19, 0.005, 0.14);
+                const pagesMaterial = new THREE.MeshStandardMaterial({ color: 0xFFFFFF });
+                const pages = new THREE.Mesh(pagesGeometry, pagesMaterial);
+                pages.position.y = 0.0075;
+                notebookGroup.add(pages);
+                
+                return notebookGroup;
+                
             default:
                 console.warn(`No placeholder defined for: ${type}`);
-                return new THREE.Group();
+                // Return a simple colored cube as a fallback for any undefined types
+                const genericGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const genericMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+                return new THREE.Mesh(genericGeometry, genericMaterial);
         }
     }
 
-    // Add method to load models from JSON config
-    async loadModelsFromConfig(configPath = 'models/office/models.json') {
-        try {
-            const response = await fetch(configPath);
-            if (!response.ok) {
-                throw new Error(`Failed to load model config: ${response.status} ${response.statusText}`);
-            }
+    /**
+     * Loads all models defined in the configuration file
+     * @returns {Promise} Promise that resolves when all models are loaded
+     */
+    loadModelsFromConfig() {
+        return new Promise((resolve, reject) => {
+            // Log that we're trying to load models
+            console.log("Loading models from configuration");
             
-            const config = await response.json();
-            console.log('Loaded model configuration:', config);
+            // Initialize models object if it doesn't exist
+            this.models = {};
             
-            // Load all models
-            const modelPromises = config.models.map(modelInfo => {
-                return this.loadModel(modelInfo.path).then(model => {
-                    // Apply transformations
-                    model.scale.set(
-                        modelInfo.scale || 1, 
-                        modelInfo.scale || 1, 
-                        modelInfo.scale || 1
-                    );
-                    
-                    if (modelInfo.position) {
-                        model.position.set(
-                            modelInfo.position[0] || 0,
-                            modelInfo.position[1] || 0,
-                            modelInfo.position[2] || 0
-                        );
-                    }
-                    
-                    if (modelInfo.rotation) {
-                        model.rotation.set(
-                            modelInfo.rotation[0] || 0,
-                            modelInfo.rotation[1] || 0,
-                            modelInfo.rotation[2] || 0
-                        );
-                    }
-                    
-                    // Set the model ID for easy access
-                    model.userData.id = modelInfo.id;
-                    
-                    // Make monitor screen clickable if this is the monitor
-                    if (modelInfo.id === 'monitor') {
-                        const screenMesh = this.findScreenInModel(model);
-                        if (screenMesh) {
-                            screenMesh.userData.clickable = true;
-                        }
-                    }
-                    
-                    return {
-                        id: modelInfo.id,
-                        model: model
-                    };
+            try {
+                console.log("Using placeholder models for all objects");
+                
+                // Create placeholders for all standard office objects
+                const standardObjects = [
+                    'desk', 'chair', 'computer', 'monitor', 'keyboard', 
+                    'mouse', 'lamp', 'bookshelf', 'plant', 'coffee_cup', 'mug', 'notebook'
+                ];
+                
+                // Create a placeholder for each standard object
+                standardObjects.forEach((key, index) => {
+                    console.log(`Creating placeholder for: ${key}`);
+                    this.models[key] = this.createPlaceholder(key);
+                    // Also store by index for fallback access
+                    this.models[index] = this.models[key];
                 });
-            });
-            
-            // Wait for all models to load
-            const loadedModels = await Promise.all(modelPromises);
-            
-            // Create a map for easy access
-            const modelMap = {};
-            loadedModels.forEach(item => {
-                modelMap[item.id] = item.model;
-            });
-            
-            return {
-                models: modelMap,
-                config: config
-            };
-        } catch (error) {
-            console.error('Error loading model configuration:', error);
-            // If loading fails, return placeholder models instead
-            console.log('Falling back to placeholder models');
-            return null;
-        }
-    }
-
-    // Helper method to find the screen in a monitor model
-    findScreenInModel(model) {
-        let screenMesh = null;
-        
-        // Search for a mesh that might be the screen
-        // Usually screens have different materials and are flat
-        model.traverse(child => {
-            if (child.isMesh) {
-                // Look for mesh with screen-like names or materials
-                const lowerName = child.name.toLowerCase();
-                if (
-                    lowerName.includes('screen') || 
-                    lowerName.includes('display') ||
-                    (child.material && (
-                        child.material.name.toLowerCase().includes('screen') ||
-                        child.material.name.toLowerCase().includes('display') ||
-                        // Screens are often emissive
-                        child.material.emissive?.r > 0 ||
-                        child.material.emissive?.g > 0 ||
-                        child.material.emissive?.b > 0
-                    ))
-                ) {
-                    screenMesh = child;
+                
+                // Map model IDs for convenience
+                // This creates aliases like 'computer' -> 'monitor'
+                if (this.models['monitor'] && !this.models['computer']) {
+                    this.models['computer'] = this.models['monitor'];
                 }
+                
+                if (this.models['coffee_cup'] && !this.models['mug']) {
+                    this.models['mug'] = this.models['coffee_cup'];
+                }
+                
+                console.log("All placeholder models created successfully");
+                resolve(this.models);
+            } catch (error) {
+                console.error("Error creating placeholder models:", error);
+                // Return empty models object
+                resolve(this.models || {});
             }
         });
-        
-        // If we couldn't find a screen by name or material,
-        // look for a flat, rectangular mesh
-        if (!screenMesh) {
-            model.traverse(child => {
-                if (child.isMesh && !screenMesh) {
-                    // Check for flat geometry that could be a screen
-                    if (child.geometry.type === 'BufferGeometry') {
-                        // Check if it's a flat plane (z-dimension is very small)
-                        // We'd need to check the geometry in its local space
-                        const positions = child.geometry.attributes.position;
-                        if (positions) {
-                            let minZ = Infinity;
-                            let maxZ = -Infinity;
-                            
-                            for (let i = 0; i < positions.count; i++) {
-                                const z = positions.getZ(i);
-                                minZ = Math.min(minZ, z);
-                                maxZ = Math.max(maxZ, z);
-                            }
-                            
-                            // If the z-range is small compared to x and y, it might be a screen
-                            if ((maxZ - minZ) < 0.1) {
-                                screenMesh = child;
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        return screenMesh;
     }
 
-    // Helper method to load an actual model or return a placeholder if loading fails
-    async loadModelWithFallback(modelInfo) {
-        try {
-            const model = await this.loadModel(modelInfo.path);
-            
-            // Apply transformations from modelInfo
-            if (modelInfo.scale) {
-                model.scale.set(modelInfo.scale, modelInfo.scale, modelInfo.scale);
-            }
-            
-            if (modelInfo.position) {
-                model.position.set(
-                    modelInfo.position[0] || 0,
-                    modelInfo.position[1] || 0,
-                    modelInfo.position[2] || 0
-                );
-            }
-            
-            if (modelInfo.rotation) {
-                model.rotation.set(
-                    modelInfo.rotation[0] || 0,
-                    modelInfo.rotation[1] || 0,
-                    modelInfo.rotation[2] || 0
-                );
-            }
-            
-            return model;
-        } catch (error) {
-            console.warn(`Failed to load model ${modelInfo.id}, using placeholder instead:`, error);
-            const placeholder = this.createPlaceholder(modelInfo.id);
-            
-            // Apply position from modelInfo (scale is handled in createPlaceholder)
-            if (modelInfo.position) {
-                placeholder.position.set(
-                    modelInfo.position[0] || 0,
-                    modelInfo.position[1] || 0,
-                    modelInfo.position[2] || 0
-                );
-            }
-            
-            if (modelInfo.rotation) {
-                placeholder.rotation.set(
-                    modelInfo.rotation[0] || 0,
-                    modelInfo.rotation[1] || 0,
-                    modelInfo.rotation[2] || 0
-                );
-            }
-            
-            return placeholder;
+    /**
+     * Get a loaded model by key
+     * @param {string} key - The key of the model to get
+     * @returns {THREE.Object3D|null} - The model or null if not found
+     */
+    getModel(key) {
+        if (this.models && this.models[key]) {
+            return this.models[key];
         }
+        
+        console.warn(`Model '${key}' not found, creating placeholder`);
+        return this.createPlaceholder(key);
     }
 } 
