@@ -14,16 +14,18 @@ export default defineConfig({
     minify: 'terser',
     sourcemap: true, // Enable source maps for better debugging
     esbuild: {
+      target: 'es2015', // Target ES2015 for better compatibility
+      format: 'esm',    // Use ESM format
+      loader: {
+        '.js': 'js'    // Explicitly handle .js files as JavaScript
+      },
       supported: {
         'top-level-await': true
-      },
-      target: 'es2015',
-      // Force esbuild to treat js files as ES modules to handle import/export properly
-      format: 'esm'
+      }
     }
   },
   optimizeDeps: {
-    exclude: ['js/ui.js'], // Exclude the problematic ui.js from dependency optimization
+    exclude: ['js/ui.js'], // Exclude the UI.js file from dependency optimization
     include: ['three', 'three/examples/jsm/controls/OrbitControls.js']
   },
   define: {

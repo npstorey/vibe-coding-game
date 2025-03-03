@@ -5,6 +5,9 @@
  * It addresses all known causes with robust error handling.
  */
 
+// Debug flag to control console output
+var DEBUG = true;
+
 // Wait for the game to initialize fully before attempting any fixes
 document.addEventListener('DOMContentLoaded', function() {
     console.log("🔍 Computer fix script loaded");
@@ -32,6 +35,41 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("🔄 Periodic computer fix applied");
         }
     }, 5000);
+
+    // Don't wait for the game to fully load - add listeners immediately
+    var directUITest = document.getElementById('direct-ui-test');
+    if (directUITest) {
+        directUITest.addEventListener('click', function() {
+            enableUIDebugMode();
+        });
+    }
+    
+    var directComputerTest = document.getElementById('direct-computer-test');
+    if (directComputerTest) {
+        directComputerTest.addEventListener('click', function() {
+            showComputerScreenDirectly();
+        });
+    }
+    
+    var debugShowComputer = document.getElementById('debug-show-computer');
+    if (debugShowComputer) {
+        debugShowComputer.addEventListener('click', function() {
+            showComputerScreenDirectly();
+        });
+    }
+    
+    // Add special debug key combinations
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+Shift+D for debug mode
+        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+            enableUIDebugMode();
+        }
+        
+        // Ctrl+Shift+C for computer screen
+        if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+            showComputerScreenDirectly();
+        }
+    });
 });
 
 // Apply immediate CSS fixes without waiting
@@ -259,6 +297,216 @@ function showComputerScreen() {
         if (window.game && window.game.resourceManager) {
             window.game.resourceManager.updateResourcesDisplay();
         }
+    }
+}
+
+// Enable UI debug mode - allows testing UI components without the 3D scene
+function enableUIDebugMode() {
+    console.log("🐞 Enabling UI Debug Mode");
+    
+    // Show UI overlay
+    var uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+        uiOverlay.classList.remove('hidden');
+        logDebug("UI overlay displayed");
+    }
+    
+    // Hide loading screen
+    var loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+        logDebug("Loading screen hidden");
+    }
+    
+    // Show debug info
+    showDebugPanel();
+    
+    // Try to initialize with available objects if game is loaded
+    if (window.game) {
+        logDebug("Game object found, connecting to it");
+        
+        // Ensure basic managers exist even if not fully initialized
+        ensureBasicManagers();
+        
+        // Try to trigger any initialization methods
+        if (window.game.ui) {
+            logDebug("UI object found, trying to initialize");
+            // Try to initialize UI events
+            if (typeof window.game.ui.initEvents === 'function') {
+                try {
+                    window.game.ui.initEvents(
+                        window.game.projectManager || {},
+                        window.game.socialMediaManager || {},
+                        window.game.hardwareManager || {},
+                        window.game.shopManager || {},
+                        window.game.resourceManager || {}
+                    );
+                    logDebug("UI.initEvents called successfully");
+                } catch (err) {
+                    console.error("Error initializing UI events:", err);
+                }
+            }
+            
+            // Update UI stats
+            if (typeof window.game.ui.updateStats === 'function') {
+                try {
+                    window.game.ui.updateStats();
+                    logDebug("UI stats updated");
+                } catch (err) {
+                    console.error("Error updating UI stats:", err);
+                }
+            }
+        } else {
+            console.warn("Game object exists but UI object not found");
+        }
+    } else {
+        logDebug("Game object not found. Running in standalone mode.");
+        // Create minimal objects needed for UI testing
+        window.game = window.game || {};
+        window.game.gameState = window.game.gameState || {
+            day: 1,
+            money: 1000,
+            skills: { coding: 1, prompt: 1 },
+            timeBlocks: 8,
+            timeBlocksUsed: 0,
+            getAvailableTimeBlocks: function() { return this.timeBlocks - this.timeBlocksUsed; },
+            activeProjects: [],
+            completedProjects: [],
+            emails: [],
+            addMoney: function(amount) { this.money += amount; }
+        };
+    }
+}
+
+// Ensure basic managers exist for testing
+function ensureBasicManagers() {
+    if (!window.game) return;
+    
+    // Ensure project manager
+    if (!window.game.projectManager) {
+        window.game.projectManager = {
+            addProject: function(project) {
+                logDebug("Mock projectManager.addProject called:", project);
+                if (!window.game.gameState.activeProjects) {
+                    window.game.gameState.activeProjects = [];
+                }
+                window.game.gameState.activeProjects.push(project);
+                return project;
+            },
+            getActiveProjects: function() {
+                return window.game.gameState.activeProjects || [];
+            },
+            getCompletedProjects: function() {
+                return window.game.gameState.completedProjects || [];
+            }
+        };
+    }
+    
+    // Ensure AI model manager
+    if (!window.game.aiModelManager) {
+        window.game.aiModelManager = {
+            getAvailableModels: function() {
+                return [
+                    { key: "gpt-3", name: "GPT-3", tier: "Basic" },
+                    { key: "bloom", name: "BLOOM", tier: "Basic" }
+                ];
+            }
+        };
+    }
+}
+
+// Show the computer screen directly
+function showComputerScreenDirectly() {
+    console.log("🖥️ Showing computer screen directly");
+    
+    // Show UI overlay
+    var uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+        uiOverlay.classList.remove('hidden');
+    }
+    
+    // Show computer screen
+    var computerScreen = document.getElementById('computer-screen');
+    if (computerScreen) {
+        computerScreen.classList.remove('hidden');
+        computerScreen.style.display = 'block';
+    }
+    
+    // Hide loading screen
+    var loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+    }
+    
+    // Enable debug mode to initialize UI
+    enableUIDebugMode();
+}
+
+// Show a debug panel with useful information
+function showDebugPanel() {
+    var debugPanel = document.getElementById('ui-debug-panel');
+    
+    // Create debug panel if it doesn't exist
+    if (!debugPanel) {
+        debugPanel = document.createElement('div');
+        debugPanel.id = 'ui-debug-panel';
+        debugPanel.style.position = 'fixed';
+        debugPanel.style.bottom = '10px';
+        debugPanel.style.right = '10px';
+        debugPanel.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        debugPanel.style.color = 'white';
+        debugPanel.style.padding = '10px';
+        debugPanel.style.borderRadius = '5px';
+        debugPanel.style.zIndex = '10000';
+        debugPanel.style.maxHeight = '300px';
+        debugPanel.style.overflowY = 'auto';
+        
+        document.body.appendChild(debugPanel);
+    }
+    
+    // Update debug info
+    updateDebugInfo(debugPanel);
+}
+
+// Update the debug panel with current state
+function updateDebugInfo(panel) {
+    if (!panel) return;
+    
+    var info = "<h3 style='margin-top:0'>UI Debug Info</h3>";
+    
+    // Add game state info
+    if (window.game && window.game.gameState) {
+        info += "<p><strong>Game Day:</strong> " + window.game.gameState.day + "</p>";
+        info += "<p><strong>Money:</strong> $" + window.game.gameState.money + "</p>";
+        info += "<p><strong>Time Blocks:</strong> " + 
+            (window.game.gameState.timeBlocks - window.game.gameState.timeBlocksUsed) + 
+            "/" + window.game.gameState.timeBlocks + "</p>";
+    } else {
+        info += "<p>Game state not available</p>";
+    }
+    
+    // Add button to refresh info
+    info += "<button id='refresh-debug' style='padding:5px 10px; margin-top:10px; width:100%'>Refresh Info</button>";
+    
+    panel.innerHTML = info;
+    
+    // Add event listener to refresh button
+    var refreshBtn = document.getElementById('refresh-debug');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            updateDebugInfo(panel);
+        });
+    }
+}
+
+// Utility function for debug logging
+function logDebug(message, data) {
+    if (!DEBUG) return;
+    
+    if (data) {
+        console.log("🔍 DEBUG:", message, data);
+    } else {
+        console.log("🔍 DEBUG:", message);
     }
 }
 

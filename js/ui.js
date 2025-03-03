@@ -24,6 +24,11 @@ export class UI {
         
         // Initial UI update
         this.updateStats();
+        
+        // Console feedback to aid debugging
+        console.log('UI initialized with gameState:', gameState ? 'available' : 'missing');
+        console.log('AIModelManager:', aiModelManager ? 'available' : 'missing');
+        console.log('PromptLibrary:', promptLibrary ? 'available' : 'missing');
     }
     
     // Initialize UI - Called by Game.initGame()
@@ -56,9 +61,15 @@ export class UI {
         }
     }
     
-    // Initialize event listeners with a more ES5-friendly approach
+    // Initialize event listeners 
     initEvents(projectManager, socialMediaManager, hardwareManager, shopManager, resourceManager) {
-        console.log("Initializing UI events");
+        console.log("Initializing UI events with managers:", {
+            projectManager: !!projectManager,
+            socialMediaManager: !!socialMediaManager,
+            hardwareManager: !!hardwareManager,
+            shopManager: !!shopManager,
+            resourceManager: !!resourceManager
+        });
         
         // Store manager references
         this.projectManager = projectManager;
@@ -70,8 +81,9 @@ export class UI {
         // Initialize panels
         this.initPanels();
         
-        // Close computer button
         var self = this;
+        
+        // Close computer button
         var closeButton = document.querySelector('.close-button');
         if (closeButton) {
             closeButton.addEventListener('click', function() {
@@ -109,6 +121,24 @@ export class UI {
         if (submitPromptBtn) {
             submitPromptBtn.addEventListener('click', function() {
                 self.handlePromptSubmission();
+            });
+        }
+        
+        // Email close button
+        var emailCloseBtn = document.getElementById('email-close-btn');
+        if (emailCloseBtn) {
+            emailCloseBtn.addEventListener('click', function() {
+                document.getElementById('email-content').classList.add('hidden');
+                document.getElementById('email-list').classList.remove('hidden');
+            });
+        }
+        
+        // Debug buttons
+        var debugShowComputer = document.getElementById('debug-show-computer');
+        if (debugShowComputer) {
+            debugShowComputer.addEventListener('click', function() {
+                self.computerScreen.classList.remove('hidden');
+                self.uiOverlay.classList.remove('hidden');
             });
         }
         
@@ -187,7 +217,45 @@ export class UI {
     handlePromptSubmission() {
         console.log("Handling prompt submission");
         
-        this.showNotification("Prompt submission feature will be available soon!", "info");
+        var projectSelect = document.getElementById('project-select');
+        var aiModelSelect = document.getElementById('ai-model-select');
+        var promptInput = document.getElementById('prompt-input');
+        
+        if (!projectSelect || !aiModelSelect || !promptInput) {
+            this.showNotification("Missing UI elements for prompt submission", "error");
+            return;
+        }
+        
+        if (!promptInput.value.trim()) {
+            this.showNotification("Please enter a prompt first", "warning");
+            return;
+        }
+        
+        // Simplified for now
+        this.showNotification("Processing your prompt...", "info");
+        
+        // Simulate processing delay for better UX
+        var self = this;
+        setTimeout(function() {
+            self.showNotification("Code generated successfully!", "success");
+            
+            // Update coding results
+            var codingResults = document.getElementById('coding-results');
+            if (codingResults) {
+                var result = document.createElement('div');
+                result.className = 'coding-result success';
+                result.innerHTML = '<div class="result-header"><div class="result-status success">SUCCESS</div><div class="result-timestamp">' + 
+                    new Date().toLocaleTimeString() + '</div></div>' +
+                    '<div class="result-message">Your code was generated successfully.</div>' +
+                    '<div class="code-container"><pre><code>// Generated code example\nfunction example() {\n  console.log("Success!");\n}</code></pre></div>';
+                
+                if (codingResults.firstChild) {
+                    codingResults.insertBefore(result, codingResults.firstChild);
+                } else {
+                    codingResults.appendChild(result);
+                }
+            }
+        }, 1500);
     }
     
     // Show notification
@@ -205,6 +273,7 @@ export class UI {
         if (container) {
             container.appendChild(notification);
             
+            var self = this;
             setTimeout(function() {
                 notification.classList.add('hiding');
                 setTimeout(function() {
@@ -219,7 +288,10 @@ export class UI {
     // Initialize panels
     initPanels() {
         console.log("Initializing panels");
-        // Panel initialization will be implemented later
+        this.setupMainMenu();
+        this.updateCompletedProjectsList();
+        this.updateProjectSelection();
+        this.updateEmailList();
     }
     
     // Update the completed projects list
@@ -343,13 +415,27 @@ export class UI {
         // Clear current email list
         emailList.innerHTML = '';
         
+        // Mock data for now
+        var mockEmails = [
+            {
+                subject: "Welcome to Vibe Coding!",
+                sender: "Tutorial Bot",
+                day: 1,
+                read: false,
+                content: "<p>Welcome to Vibe Coding Simulator! This is your first day as an indie developer.</p><p>Use the computer to work on projects and earn money.</p>"
+            },
+            {
+                subject: "Your First Project Opportunity",
+                sender: "ProjectFinder",
+                day: 1,
+                read: false,
+                content: "<p>We've found a perfect first project for you: a simple landing page.</p><p>Click 'Accept Project' to get started!</p><div class='project-offer'><h4>Simple Landing Page</h4><p>Difficulty: 1/5</p><p>Reward: $200</p><button class='accept-project-btn'>Accept Project</button></div>"
+            }
+        ];
+        
         // Create placeholder if no emails
-        if (!this.gameState.emails || this.gameState.emails.length === 0) {
-            var emptyMessage = document.createElement('div');
-            emptyMessage.className = 'no-emails-message';
-            emptyMessage.textContent = 'No emails yet. Check back later!';
-            emailList.appendChild(emptyMessage);
-            return;
+        if (!this.gameState.emails) {
+            this.gameState.emails = mockEmails;
         }
         
         // Add each email to the list
@@ -413,6 +499,35 @@ export class UI {
         // Show content, hide list
         emailList.classList.add('hidden');
         emailContent.classList.remove('hidden');
+        
+        // Add handlers for any accept project buttons
+        var self = this;
+        var acceptButtons = emailBody.querySelectorAll('.accept-project-btn');
+        for (var i = 0; i < acceptButtons.length; i++) {
+            acceptButtons[i].addEventListener('click', function() {
+                var projectTitle = this.parentNode.querySelector('h4').textContent;
+                var difficultyText = this.parentNode.querySelector('p').textContent;
+                var difficulty = parseInt(difficultyText.match(/\d+/)[0], 10);
+                var rewardText = this.parentNode.querySelectorAll('p')[1].textContent;
+                var reward = parseInt(rewardText.match(/\d+/)[0], 10);
+                
+                // Create and add the project
+                if (self.projectManager) {
+                    self.projectManager.addProject({
+                        name: projectTitle,
+                        difficulty: difficulty,
+                        reward: reward,
+                        type: 'email',
+                        progress: 0,
+                        completed: false
+                    });
+                    self.showNotification("Project accepted: " + projectTitle, "success");
+                } else {
+                    console.error("Project Manager not available");
+                    self.showNotification("Couldn't add project: system error", "error");
+                }
+            });
+        }
     }
     
     // Update project selection dropdown
@@ -428,26 +543,44 @@ export class UI {
         // Clear current options
         projectSelect.innerHTML = '';
         
-        // Add placeholder if no projects
+        // Mock data for now
         if (!this.gameState.activeProjects || this.gameState.activeProjects.length === 0) {
-            var emptyOption = document.createElement('option');
-            emptyOption.value = "";
-            emptyOption.textContent = "No active projects";
-            projectSelect.appendChild(emptyOption);
-            return;
+            // Create a mock project if none exist
+            if (this.projectManager) {
+                this.projectManager.addProject({
+                    name: "Tutorial Project",
+                    difficulty: 1,
+                    reward: 100,
+                    type: 'tutorial',
+                    progress: 0,
+                    completed: false
+                });
+            } else {
+                // If no projectManager, create local mock data
+                this.gameState.activeProjects = [{
+                    name: "Demo Project",
+                    difficulty: 1,
+                    reward: 100,
+                    type: 'demo',
+                    progress: 0,
+                    completed: false
+                }];
+            }
         }
         
         // Add each active project to the dropdown
         var self = this;
-        this.gameState.activeProjects.forEach(function(project, index) {
-            var option = document.createElement('option');
-            option.value = index;
-            option.textContent = project.name;
-            projectSelect.appendChild(option);
-        });
-        
-        // Trigger change to update current project info
-        this.updateCurrentProjectInfo();
+        if (this.gameState.activeProjects) {
+            this.gameState.activeProjects.forEach(function(project, index) {
+                var option = document.createElement('option');
+                option.value = index;
+                option.textContent = project.name;
+                projectSelect.appendChild(option);
+            });
+            
+            // Trigger change to update current project info
+            this.updateCurrentProjectInfo();
+        }
     }
     
     // Update current project info display
@@ -534,14 +667,14 @@ export class UI {
         aiModelSelect.innerHTML = '';
         
         // Get available models
-        var availableModels = this.aiModelManager.getAvailableModels();
+        var availableModels = this.aiModelManager ? this.aiModelManager.getAvailableModels() : null;
         
         if (!availableModels || availableModels.length === 0) {
-            var emptyOption = document.createElement('option');
-            emptyOption.value = "gpt-3";
-            emptyOption.textContent = "GPT-3 (Basic)";
-            aiModelSelect.appendChild(emptyOption);
-            return;
+            // Default models if none available
+            availableModels = [
+                { key: "gpt-3", name: "GPT-3", tier: "Basic" },
+                { key: "bloom", name: "BLOOM", tier: "Basic" }
+            ];
         }
         
         // Add each available model
