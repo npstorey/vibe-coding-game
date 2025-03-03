@@ -221,6 +221,9 @@ class Game {
                 this.generateInitialOpportunities();
             }
             
+            // Setup debugging tools
+            this.setupDebugTools();
+            
             // Start animation loop
             this.animate();
             
@@ -1038,11 +1041,45 @@ class Game {
                     computerScreen.classList.remove('hidden');
                     computerScreen.style.display = 'block';
                     
+                    // Show the UI overlay if it's hidden
+                    const uiOverlay = document.getElementById('ui-overlay');
+                    if (uiOverlay && uiOverlay.classList.contains('hidden')) {
+                        uiOverlay.classList.remove('hidden');
+                        console.log("UI overlay was hidden, now showing");
+                    }
+                    
                     // Initialize resources display if resourceManager exists
                     if (this.resourceManager) {
                         this.resourceManager.updateResourcesDisplay();
+                        console.log("Resources display updated");
                     } else {
                         console.warn("Resource manager not available for display update");
+                    }
+                    
+                    // Make sure other UI elements are visible
+                    const statsPanel = document.getElementById('stats-panel');
+                    if (statsPanel && statsPanel.classList.contains('hidden')) {
+                        statsPanel.classList.remove('hidden');
+                    }
+                    
+                    // Update stats display
+                    if (this.ui && typeof this.ui.updateStats === 'function') {
+                        this.ui.updateStats();
+                        console.log("Stats updated on computer click");
+                    }
+                    
+                    // Add visual feedback animation
+                    if (this.computer && this.computer.material) {
+                        // Save original color
+                        const originalColor = this.computer.material.color ? this.computer.material.color.clone() : null;
+                        
+                        // Flash green to indicate successful click
+                        if (originalColor) {
+                            this.computer.material.color.set(0x00ff00);
+                            setTimeout(() => {
+                                this.computer.material.color.copy(originalColor);
+                            }, 300);
+                        }
                     }
                 } else {
                     console.error("Computer screen element not found in DOM");
@@ -1195,11 +1232,12 @@ class Game {
             // Close computer screen button
             const closeBtn = document.getElementById('close-computer-btn');
             if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
+                closeBtn.addEventListener('click', (e) => {
                     console.log("Close button clicked");
                     const computerScreen = document.getElementById('computer-screen');
                     if (computerScreen) {
                         computerScreen.classList.add('hidden');
+                        computerScreen.style.display = 'none';
                     }
                 });
             }
@@ -1210,6 +1248,19 @@ class Game {
                 button.addEventListener('click', (e) => {
                     const action = button.getAttribute('data-action');
                     console.log(`Menu button clicked: ${action}`);
+                    
+                    // Prevent any default behavior
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Call the UI's switchPanel method if available
+                    if (this.ui && typeof this.ui.switchPanel === 'function') {
+                        console.log(`Calling UI.switchPanel('${action}')`);
+                        this.ui.switchPanel(action);
+                        return;
+                    }
+                    
+                    // Fallback if UI method not available
                     
                     // Hide all panels
                     document.querySelectorAll('.panel').forEach(panel => {
@@ -1225,18 +1276,33 @@ class Game {
                     }
                     
                     // Show the requested panel
-                    const panelId = `${action}-panel`;
-                    const panel = document.getElementById(panelId);
-                    if (panel) {
-                        panel.classList.remove('hidden');
-                        panel.style.display = 'block';
-                    }
-                    
-                    // Handle special actions
                     if (action === 'end-day') {
                         // Handle end day logic
                         if (this.ui && typeof this.ui.handleEndDay === 'function') {
                             this.ui.handleEndDay();
+                        }
+                        // Return to main menu after handling end-day
+                        if (mainMenu) {
+                            mainMenu.classList.remove('hidden');
+                            mainMenu.style.display = 'block';
+                        }
+                    } else {
+                        // Regular panel switching
+                        const panelId = `${action}-panel`;
+                        const panel = document.getElementById(panelId);
+                        if (panel) {
+                            panel.classList.remove('hidden');
+                            panel.style.display = 'block';
+                            
+                            // Update related content
+                            this.updatePanelContent(action);
+                        } else {
+                            console.error(`Panel not found: ${panelId}`);
+                            // Return to main menu if panel not found
+                            if (mainMenu) {
+                                mainMenu.classList.remove('hidden');
+                                mainMenu.style.display = 'block';
+                            }
                         }
                     }
                 });
@@ -1245,27 +1311,164 @@ class Game {
             // Back buttons
             const backBtns = document.querySelectorAll('.back-btn');
             backBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => {
                     console.log("Back button clicked");
+                    e.preventDefault();
+                    e.stopPropagation();
                     
-                    // Hide all panels
+                    // Use UI method if available
+                    if (this.ui && typeof this.ui.switchPanel === 'function') {
+                        this.ui.switchPanel('main-menu');
+                        return;
+                    }
+                    
+                    // Fallback implementation
                     document.querySelectorAll('.panel').forEach(panel => {
                         panel.classList.add('hidden');
                         panel.style.display = 'none';
                     });
                     
-                    // Show main menu
                     const mainMenu = document.getElementById('main-menu');
                     if (mainMenu) {
                         mainMenu.classList.remove('hidden');
-                        mainMenu.style.display = 'grid';
+                        mainMenu.style.display = 'block';
                     }
                 });
             });
             
-            console.log("UI initialization complete - all event listeners set up");
+            // Add a direct method to handle panel content updates as fallback
+            if (!this.updatePanelContent) {
+                this.updatePanelContent = function(panelName) {
+                    try {
+                        console.log(`Updating panel content for: ${panelName}`);
+                        
+                        // Basic implementations for essential panels
+                        switch (panelName) {
+                            case 'email':
+                                // Update email list if handler exists
+                                if (this.ui && typeof this.ui.updateEmailList === 'function') {
+                                    this.ui.updateEmailList();
+                                }
+                                break;
+                                
+                            case 'code':
+                            case 'coding':
+                                // Update project and AI model selection if handlers exist
+                                if (this.ui) {
+                                    if (typeof this.ui.updateProjectSelection === 'function') {
+                                        this.ui.updateProjectSelection();
+                                    }
+                                    if (typeof this.ui.updateAIModelSelection === 'function') {
+                                        this.ui.updateAIModelSelection();
+                                    }
+                                }
+                                break;
+                                
+                            case 'resources':
+                                // Update resources display if manager exists
+                                if (this.resourceManager && typeof this.resourceManager.updateResourcesDisplay === 'function') {
+                                    this.resourceManager.updateResourcesDisplay();
+                                }
+                                break;
+                        }
+                    } catch (error) {
+                        console.error(`Error updating panel content for ${panelName}:`, error);
+                    }
+                };
+            }
+            
+            // Add submit prompt button handler
+            const submitPromptBtn = document.getElementById('submit-prompt-btn');
+            if (submitPromptBtn) {
+                console.log("Setting up submit prompt button listener");
+                submitPromptBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Call UI's handlePromptSubmission method if available
+                    if (this.ui && typeof this.ui.handlePromptSubmission === 'function') {
+                        console.log("Calling UI.handlePromptSubmission");
+                        this.ui.handlePromptSubmission(e);
+                    } else {
+                        console.error("UI.handlePromptSubmission method not available");
+                    }
+                });
+            }
+            
+            // Add debug button handlers
+            const debugShowComputer = document.getElementById('debug-show-computer');
+            if (debugShowComputer) {
+                console.log("Setting up debug show computer button");
+                debugShowComputer.addEventListener('click', () => {
+                    console.log("Debug: Showing computer UI");
+                    this.handleObjectClick('computer');
+                });
+            }
+            
+            // Add hidden test panel
+            const testPanel = document.createElement('div');
+            testPanel.id = 'test-panel';
+            testPanel.style.position = 'fixed';
+            testPanel.style.top = '50px';
+            testPanel.style.right = '10px';
+            testPanel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            testPanel.style.padding = '10px';
+            testPanel.style.borderRadius = '5px';
+            testPanel.style.zIndex = '9998';
+            testPanel.style.display = 'none';
+            
+            // Add test buttons for each panel
+            const panels = ['email', 'coding', 'social', 'shop', 'resources'];
+            panels.forEach(panel => {
+                const button = document.createElement('button');
+                button.textContent = `Show ${panel} panel`;
+                button.style.display = 'block';
+                button.style.width = '100%';
+                button.style.marginBottom = '5px';
+                button.style.padding = '5px';
+                button.addEventListener('click', () => {
+                    if (this.ui && typeof this.ui.switchPanel === 'function') {
+                        console.log(`Debug: Switching to ${panel} panel`);
+                        this.ui.switchPanel(panel);
+                    } else {
+                        console.warn(`UI.switchPanel not available for ${panel}`);
+                    }
+                });
+                testPanel.appendChild(button);
+            });
+            
+            // Add End Day button
+            const endDayButton = document.createElement('button');
+            endDayButton.textContent = 'End Day';
+            endDayButton.style.display = 'block';
+            endDayButton.style.width = '100%';
+            endDayButton.style.marginBottom = '5px';
+            endDayButton.style.padding = '5px';
+            endDayButton.addEventListener('click', () => {
+                if (this.ui && typeof this.ui.handleEndDay === 'function') {
+                    console.log("Debug: Ending day");
+                    this.ui.handleEndDay();
+                } else {
+                    console.warn("UI.handleEndDay not available");
+                }
+            });
+            testPanel.appendChild(endDayButton);
+            
+            document.body.appendChild(testPanel);
+            
+            // Set up toggle button
+            const debugTogglePanels = document.getElementById('debug-toggle-panels');
+            if (debugTogglePanels) {
+                console.log("Setting up debug toggle panels button");
+                debugTogglePanels.addEventListener('click', () => {
+                    console.log("Debug: Toggling test panels");
+                    testPanel.style.display = testPanel.style.display === 'none' ? 'block' : 'none';
+                });
+            }
+            
+            console.log("UI initialization completed");
         } catch (error) {
-            console.error("Error initializing UI event handlers:", error);
+            console.error("Error in initializeUI:", error);
         }
     }
 
@@ -1526,6 +1729,158 @@ class Game {
                 tooltip.parentNode.removeChild(tooltip);
             }
         }, 5000);
+    }
+
+    // Add debugging tools for development
+    setupDebugTools() {
+        console.log("Setting up debug tools");
+        
+        // Create debug overlay element
+        this.debugOverlay = document.createElement('div');
+        this.debugOverlay.id = 'debug-overlay';
+        this.debugOverlay.style.position = 'fixed';
+        this.debugOverlay.style.top = '10px';
+        this.debugOverlay.style.right = '10px';
+        this.debugOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.debugOverlay.style.color = '#00ff00';
+        this.debugOverlay.style.padding = '10px';
+        this.debugOverlay.style.borderRadius = '5px';
+        this.debugOverlay.style.fontFamily = 'monospace';
+        this.debugOverlay.style.fontSize = '12px';
+        this.debugOverlay.style.zIndex = '9999';
+        this.debugOverlay.style.maxWidth = '400px';
+        this.debugOverlay.style.maxHeight = '300px';
+        this.debugOverlay.style.overflow = 'auto';
+        this.debugOverlay.style.display = 'none';
+        document.body.appendChild(this.debugOverlay);
+        
+        // Add toggle with tilde key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '`' || e.key === '~') {
+                this.debugOverlay.style.display = this.debugOverlay.style.display === 'none' ? 'block' : 'none';
+                this.updateDebugInfo();
+            }
+        });
+        
+        // Create test button panel for quick testing
+        this.testPanel = document.createElement('div');
+        this.testPanel.id = 'test-panel';
+        this.testPanel.style.position = 'fixed';
+        this.testPanel.style.bottom = '10px';
+        this.testPanel.style.right = '10px';
+        this.testPanel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.testPanel.style.padding = '10px';
+        this.testPanel.style.borderRadius = '5px';
+        this.testPanel.style.zIndex = '9998';
+        this.testPanel.style.display = 'none';
+        document.body.appendChild(this.testPanel);
+        
+        // Add test buttons
+        const testButtons = [
+            { name: 'Show Computer', action: () => this.handleObjectClick('computer') },
+            { name: 'Email Panel', action: () => this.ui?.switchPanel('email') },
+            { name: 'Coding Panel', action: () => this.ui?.switchPanel('coding') },
+            { name: 'Resources Panel', action: () => this.ui?.switchPanel('resources') },
+            { name: 'Shop Panel', action: () => this.ui?.switchPanel('shop') },
+            { name: 'Social Panel', action: () => this.ui?.switchPanel('social') },
+            { name: 'End Day', action: () => this.ui?.handleEndDay() }
+        ];
+        
+        testButtons.forEach(buttonInfo => {
+            const button = document.createElement('button');
+            button.innerText = buttonInfo.name;
+            button.style.margin = '5px';
+            button.style.padding = '5px 10px';
+            button.style.backgroundColor = '#333';
+            button.style.color = 'white';
+            button.style.border = '1px solid #555';
+            button.style.borderRadius = '3px';
+            button.style.cursor = 'pointer';
+            button.addEventListener('click', buttonInfo.action);
+            this.testPanel.appendChild(button);
+        });
+        
+        // Log toggle button
+        const toggleLogsBtn = document.createElement('button');
+        toggleLogsBtn.innerText = 'Toggle Test Panel';
+        toggleLogsBtn.style.position = 'fixed';
+        toggleLogsBtn.style.bottom = '10px';
+        toggleLogsBtn.style.right = '10px';
+        toggleLogsBtn.style.backgroundColor = '#444';
+        toggleLogsBtn.style.color = 'white';
+        toggleLogsBtn.style.border = 'none';
+        toggleLogsBtn.style.borderRadius = '3px';
+        toggleLogsBtn.style.padding = '5px 10px';
+        toggleLogsBtn.style.zIndex = '9999';
+        toggleLogsBtn.style.cursor = 'pointer';
+        
+        toggleLogsBtn.addEventListener('click', () => {
+            this.testPanel.style.display = this.testPanel.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        document.body.appendChild(toggleLogsBtn);
+        
+        // Schedule periodic updates to the debug info
+        setInterval(() => {
+            if (this.debugOverlay.style.display !== 'none') {
+                this.updateDebugInfo();
+            }
+        }, 1000);
+    }
+    
+    // Update debug information
+    updateDebugInfo() {
+        if (!this.debugOverlay) return;
+        
+        try {
+            const info = document.createElement('div');
+            
+            // Game state info
+            const gameStateInfo = document.createElement('div');
+            gameStateInfo.innerHTML = `<h3>Game State</h3>
+                <p>Day: ${this.gameState.day}</p>
+                <p>Time Blocks: ${this.gameState.timeBlocks - this.gameState.timeBlocksUsed}/${this.gameState.timeBlocks}</p>
+                <p>Money: $${this.gameState.money}</p>
+                <p>Coding Skill: ${this.gameState.skills.coding.toFixed(1)}</p>
+                <p>Prompt Skill: ${this.gameState.skills.prompt.toFixed(1)}</p>
+                <p>Active Projects: ${this.gameState.activeProjects.length}</p>`;
+            
+            // Computer interactivity info
+            const computerInfo = document.createElement('div');
+            computerInfo.innerHTML = `<h3>Computer Status</h3>
+                <p>Computer Object: ${this.computer ? '✅' : '❌'}</p>
+                <p>Interactive: ${this.computer?.userData?.isInteractive ? '✅' : '❌'}</p>
+                <p>In interactiveObjects: ${this.interactiveObjects?.includes(this.computer) ? '✅' : '❌'}</p>
+                <p>Computer Screen: ${document.getElementById('computer-screen') ? '✅' : '❌'}</p>`;
+            
+            // UI info
+            const uiInfo = document.createElement('div');
+            const visiblePanel = Array.from(document.querySelectorAll('.panel')).filter(p => !p.classList.contains('hidden'))[0]?.id || 'None';
+            uiInfo.innerHTML = `<h3>UI Status</h3>
+                <p>UI Object: ${this.ui ? '✅' : '❌'}</p>
+                <p>UI Overlay Visible: ${!document.getElementById('ui-overlay')?.classList.contains('hidden') ? '✅' : '❌'}</p>
+                <p>Current Panel: ${visiblePanel}</p>
+                <p>Loading Screen Hidden: ${document.getElementById('loading-screen')?.classList.contains('hidden') ? '✅' : '❌'}</p>`;
+            
+            // Combine all sections
+            info.appendChild(gameStateInfo);
+            info.appendChild(document.createElement('hr'));
+            info.appendChild(computerInfo);
+            info.appendChild(document.createElement('hr'));
+            info.appendChild(uiInfo);
+            
+            // Add timestamp
+            const timestamp = document.createElement('div');
+            timestamp.innerHTML = `<p><em>Last updated: ${new Date().toLocaleTimeString()}</em></p>`;
+            info.appendChild(timestamp);
+            
+            // Update the overlay
+            this.debugOverlay.innerHTML = '';
+            this.debugOverlay.appendChild(info);
+        } catch (error) {
+            console.error("Error updating debug info:", error);
+            this.debugOverlay.innerHTML = `<p>Error updating debug info: ${error.message}</p>`;
+        }
     }
 }
 

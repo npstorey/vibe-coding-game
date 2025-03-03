@@ -2555,3 +2555,414 @@ input[type="submit"] {
     background-color: #555;
 }
 /* End Error Messages */ 
+
+/* Enhanced Coding Result Styles */
+.coding-result {
+    margin-bottom: 20px;
+    background: #162740;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-left: 4px solid #36b5ff;
+    animation: resultAppear 0.3s ease-out;
+}
+
+.coding-result.success {
+    border-left-color: #36ff74;
+}
+
+.coding-result.partial-success {
+    border-left-color: #ff9c36;
+}
+
+@keyframes resultAppear {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(54, 181, 255, 0.2);
+}
+
+.result-status {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: white;
+}
+
+.result-status.success {
+    background-color: rgba(54, 255, 116, 0.2);
+    color: #36ff74;
+}
+
+.result-status.partial-success {
+    background-color: rgba(255, 156, 54, 0.2);
+    color: #ff9c36;
+}
+
+.result-timestamp {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+}
+
+.result-message {
+    padding: 10px 0;
+    font-size: 14px;
+    color: #d1f7ff;
+}
+
+.result-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+}
+
+.detail-label {
+    color: rgba(255, 255, 255, 0.7);
+    margin-right: 5px;
+    font-size: 12px;
+}
+
+.detail-value {
+    color: #36b5ff;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.prompt-container, .code-container {
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+}
+
+.prompt-header, .code-header {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 5px;
+}
+
+.prompt-text {
+    color: #d1f7ff;
+    font-size: 14px;
+    padding: 8px;
+    white-space: pre-wrap;
+}
+
+.code-block {
+    background: #0f1a2b;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13px;
+    color: #d1f7ff;
+    white-space: pre;
+    margin: 0;
+}
+
+/* Enhanced Email Styles */
+.email-item {
+    padding: 15px;
+    border-bottom: 1px solid rgba(54, 181, 255, 0.2);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.email-item:hover {
+    background-color: rgba(54, 181, 255, 0.1);
+}
+
+.email-item.unread {
+    background-color: rgba(54, 181, 255, 0.05);
+    border-left: 3px solid #36b5ff;
+}
+
+.email-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.email-subject {
+    font-weight: bold;
+    color: #d1f7ff;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+}
+
+.project-badge {
+    background-color: rgba(54, 255, 116, 0.2);
+    color: #36ff74;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: bold;
+}
+
+.email-sender {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+}
+
+.email-preview {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.email-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.email-date {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.unread-indicator {
+    background-color: #36b5ff;
+    color: #0f1a2b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.no-emails-message {
+    padding: 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+/* Email Content View */
+#email-content {
+    padding: 20px;
+}
+
+.email-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(54, 181, 255, 0.2);
+}
+
+#email-subject {
+    font-size: 20px;
+    color: #d1f7ff;
+    margin-bottom: 10px;
+}
+
+#email-sender, #email-date {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+#email-body {
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+.project-offer {
+    margin-top: 25px;
+    padding: 15px;
+    background: rgba(54, 255, 116, 0.05);
+    border: 1px solid rgba(54, 255, 116, 0.2);
+    border-radius: 8px;
+}
+
+.project-offer h4 {
+    color: #36ff74;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.project-offer p {
+    margin-bottom: 8px;
+}
+
+.accept-project-btn {
+    background: #36ff74;
+    color: #0f1a2b;
+    font-weight: bold;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.accept-project-btn:hover {
+    background: #4aff84;
+    transform: translateY(-2px);
+}
+
+/* Project Card Styles */
+.project-card {
+    background: #1a2c45;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.project-header h3 {
+    color: #d1f7ff;
+    font-size: 18px;
+    margin: 0;
+}
+
+.project-type-badge {
+    background: rgba(54, 181, 255, 0.2);
+    color: #36b5ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.project-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.detail-row {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.difficulty-stars {
+    color: #ff36b5;
+    letter-spacing: 2px;
+}
+
+.reward-amount {
+    color: #36ff74;
+    font-weight: bold;
+}
+
+.project-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.project-status.not-started {
+    background-color: rgba(255, 54, 84, 0.2);
+    color: #ff3654;
+}
+
+.project-status.in-progress {
+    background-color: rgba(255, 156, 54, 0.2);
+    color: #ff9c36;
+}
+
+.project-status.advanced {
+    background-color: rgba(54, 181, 255, 0.2);
+    color: #36b5ff;
+}
+
+.project-status.complete {
+    background-color: rgba(54, 255, 116, 0.2);
+    color: #36ff74;
+}
+
+.progress-bar-container {
+    height: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    margin-top: 4px;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #36b5ff;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    right: 0;
+    top: -20px;
+    font-size: 12px;
+    color: #36b5ff;
+}
+
+.project-description {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(54, 181, 255, 0.1);
+}
+
+.project-description p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.no-project-message {
+    text-align: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.no-project-message p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 15px;
+}
+
+.error-message {
+    color: #ff3654;
+    padding: 10px;
+    background: rgba(255, 54, 84, 0.1);
+    border-radius: 4px;
+    margin: 10px 0;
+    text-align: center;
+}
