@@ -194,6 +194,20 @@ export class UI {
             if (targetPanel) {
                 targetPanel.classList.remove('hidden');
                 targetPanel.style.display = 'block';
+                
+                // Special handling for specific panels
+                if (panelName === 'projects' || panelName === 'projects-panel') {
+                    console.log("Projects panel detected, updating project lists");
+                    this.updateActiveProjectsList();
+                    this.updateCompletedProjectsList();
+                } else if (panelName === 'social' || panelName === 'social-panel') {
+                    console.log("Social panel detected, ensuring it's initialized");
+                    this.initSocialPanel();
+                } else if (panelName === 'coding' || panelName === 'coding-panel') {
+                    console.log("Coding panel detected, updating project selection");
+                    this.updateProjectSelection();
+                    this.updateAIModelSelection();
+                }
             } else {
                 console.error("Panel not found: " + panelName);
                 document.getElementById('main-menu').classList.remove('hidden');
@@ -292,6 +306,8 @@ export class UI {
         this.updateCompletedProjectsList();
         this.updateProjectSelection();
         this.updateEmailList();
+        this.updateActiveProjectsList();
+        this.initSocialPanel();
     }
     
     // Update the completed projects list
@@ -685,5 +701,486 @@ export class UI {
             option.textContent = model.name + " (" + model.tier + ")";
             aiModelSelect.appendChild(option);
         });
+    }
+    
+    // Initialize social media panel with mock content
+    initSocialPanel() {
+        console.log("Initializing social media panel");
+        
+        var socialPostsList = document.getElementById('social-posts-list');
+        if (!socialPostsList) {
+            console.error("Social posts list container not found");
+            return;
+        }
+        
+        // Clear current list
+        socialPostsList.innerHTML = '';
+        
+        // Create mock social media posts
+        var mockPosts = [
+            {
+                author: "CodingGuru",
+                time: "Today",
+                content: "Just discovered an amazing prompt technique for generating complex algorithms with AI. Start with a step-by-step breakdown of the problem before asking for code. #AIPrompting #CodingTips",
+                tags: ["AIPrompting", "CodingTips"],
+                trending: true
+            },
+            {
+                author: "TechTrends",
+                time: "Yesterday",
+                content: "AI-generated websites are dominating the freelance market this month. If you're not using AI for your projects, you're falling behind! #TechTrends #AIRevolution",
+                tags: ["TechTrends", "AIRevolution"],
+                trending: true
+            },
+            {
+                author: "DevLifestyle",
+                time: "2 days ago",
+                content: "Working on a simple landing page for a client using AI assistance. Completed in 1 hour what would have taken a day before! Share your AI productivity wins. #DevLife #Productivity",
+                tags: ["DevLife", "Productivity"],
+                trending: false
+            }
+        ];
+        
+        // Add each post to the list
+        for (var i = 0; i < mockPosts.length; i++) {
+            var post = mockPosts[i];
+            
+            var postElement = document.createElement('div');
+            postElement.className = 'social-post';
+            
+            var postHeader = document.createElement('div');
+            postHeader.className = 'post-header';
+            
+            var postAuthor = document.createElement('div');
+            postAuthor.className = 'post-author';
+            postAuthor.textContent = post.author;
+            
+            var postTime = document.createElement('div');
+            postTime.className = 'post-time';
+            postTime.textContent = post.time;
+            
+            postHeader.appendChild(postAuthor);
+            postHeader.appendChild(postTime);
+            
+            var postContent = document.createElement('div');
+            postContent.className = 'post-content';
+            postContent.textContent = post.content;
+            
+            var postTags = document.createElement('div');
+            postTags.className = 'post-tags';
+            
+            // Add tags
+            for (var j = 0; j < post.tags.length; j++) {
+                var tag = document.createElement('span');
+                tag.className = 'post-tag' + (post.trending ? ' trending' : '');
+                tag.textContent = '#' + post.tags[j];
+                postTags.appendChild(tag);
+            }
+            
+            postElement.appendChild(postHeader);
+            postElement.appendChild(postContent);
+            postElement.appendChild(postTags);
+            
+            socialPostsList.appendChild(postElement);
+        }
+        
+        // Set up scroll social button
+        var scrollSocialBtn = document.getElementById('scroll-social-btn');
+        if (scrollSocialBtn) {
+            var self = this;
+            scrollSocialBtn.addEventListener('click', function() {
+                // Check if player has enough time blocks
+                if (self.gameState.getAvailableTimeBlocks() < 1) {
+                    self.showNotification("Not enough time blocks remaining today", "error");
+                    return;
+                }
+                
+                // Use a time block
+                self.gameState.useTimeBlock(1);
+                
+                // Generate a new post
+                var newPost = self.generateRandomSocialPost();
+                
+                // Add the new post to the beginning of the list
+                var socialPostsList = document.getElementById('social-posts-list');
+                if (socialPostsList && socialPostsList.firstChild) {
+                    socialPostsList.insertBefore(newPost, socialPostsList.firstChild);
+                } else if (socialPostsList) {
+                    socialPostsList.appendChild(newPost);
+                }
+                
+                // Small chance to gain a skill point
+                if (Math.random() < 0.3) { // 30% chance
+                    var skillType = Math.random() < 0.5 ? 'coding' : 'prompt';
+                    var skillGain = 0.1 + (Math.random() * 0.2); // 0.1 to 0.3
+                    
+                    if (self.gameState.increaseSkill) {
+                        self.gameState.increaseSkill(skillType, skillGain);
+                        self.showNotification("You learned something new! " + skillType.charAt(0).toUpperCase() + skillType.slice(1) + " skill increased by " + skillGain.toFixed(1), "success");
+                    }
+                }
+                
+                // Update stats
+                self.updateStats();
+                self.showNotification("You scrolled social media and found new posts", "info");
+            });
+        }
+    }
+    
+    // Generate a random social media post
+    generateRandomSocialPost() {
+        var authors = ["AIDevPro", "CodeMaster", "PromptEngineer", "TechGuru", "WebWizard"];
+        var topics = [
+            "Just found a way to create responsive layouts with a single AI prompt. Game changer!",
+            "Optimized my workflow by using templates with my AI assistant. Productivity up 300%!",
+            "The secret to good prompts is being specific about the output format you want.",
+            "Don't tell AI to 'make a website'. Instead, specify components, colors, and functionality.",
+            "Today's client was amazed at how quickly I delivered their landing page. Thanks AI!",
+            "Learning to collaborate with AI rather than just use it has transformed my coding."
+        ];
+        var tags = [
+            ["AIPrompting", "Productivity"],
+            ["CodingTips", "AITools"],
+            ["WebDev", "AIAssistant"],
+            ["FreelanceTips", "RemoteWork"],
+            ["FrontendDev", "AIDesign"],
+            ["PromptEngineering", "AITips"]
+        ];
+        
+        // Randomly select content
+        var author = authors[Math.floor(Math.random() * authors.length)];
+        var contentIndex = Math.floor(Math.random() * topics.length);
+        var content = topics[contentIndex];
+        var postTags = tags[contentIndex % tags.length];
+        var trending = Math.random() < 0.2; // 20% chance to be trending
+        
+        // Create post element
+        var postElement = document.createElement('div');
+        postElement.className = 'social-post';
+        
+        var postHeader = document.createElement('div');
+        postHeader.className = 'post-header';
+        
+        var postAuthor = document.createElement('div');
+        postAuthor.className = 'post-author';
+        postAuthor.textContent = author;
+        
+        var postTime = document.createElement('div');
+        postTime.className = 'post-time';
+        postTime.textContent = "Just now";
+        
+        postHeader.appendChild(postAuthor);
+        postHeader.appendChild(postTime);
+        
+        var postContent = document.createElement('div');
+        postContent.className = 'post-content';
+        postContent.textContent = content;
+        
+        var postTagsElement = document.createElement('div');
+        postTagsElement.className = 'post-tags';
+        
+        // Add tags
+        for (var i = 0; i < postTags.length; i++) {
+            var tag = document.createElement('span');
+            tag.className = 'post-tag' + (trending ? ' trending' : '');
+            tag.textContent = '#' + postTags[i];
+            postTagsElement.appendChild(tag);
+        }
+        
+        postElement.appendChild(postHeader);
+        postElement.appendChild(postContent);
+        postElement.appendChild(postTagsElement);
+        
+        return postElement;
+    }
+    
+    // Update the active projects list
+    updateActiveProjectsList() {
+        console.log("Updating active projects list");
+        
+        var activeProjectsList = document.getElementById('active-projects-list');
+        if (!activeProjectsList) {
+            console.error("Could not find active-projects-list element");
+            return;
+        }
+        
+        // Clear existing list
+        activeProjectsList.innerHTML = '';
+        
+        // Add each active project
+        if (this.gameState.activeProjects && this.gameState.activeProjects.length > 0) {
+            for (var i = 0; i < this.gameState.activeProjects.length; i++) {
+                var project = this.gameState.activeProjects[i];
+                
+                var projectCard = document.createElement('div');
+                projectCard.className = 'project-card';
+                
+                var projectHeader = document.createElement('div');
+                projectHeader.className = 'project-header';
+                
+                var projectName = document.createElement('h3');
+                projectName.textContent = project.name;
+                
+                var projectType = document.createElement('span');
+                projectType.className = 'project-type-badge';
+                projectType.textContent = project.type || 'Web';
+                
+                projectHeader.appendChild(projectName);
+                projectHeader.appendChild(projectType);
+                
+                var projectDetails = document.createElement('div');
+                projectDetails.className = 'project-details';
+                
+                var difficultyRow = document.createElement('div');
+                difficultyRow.className = 'detail-row';
+                
+                var difficultyLabel = document.createElement('span');
+                difficultyLabel.className = 'detail-label';
+                difficultyLabel.textContent = 'Difficulty:';
+                
+                var difficultyStars = document.createElement('span');
+                difficultyStars.className = 'difficulty-stars';
+                difficultyStars.textContent = '★'.repeat(project.difficulty) + '☆'.repeat(5 - project.difficulty);
+                
+                difficultyRow.appendChild(difficultyLabel);
+                difficultyRow.appendChild(difficultyStars);
+                
+                var rewardRow = document.createElement('div');
+                rewardRow.className = 'detail-row';
+                
+                var rewardLabel = document.createElement('span');
+                rewardLabel.className = 'detail-label';
+                rewardLabel.textContent = 'Reward:';
+                
+                var rewardAmount = document.createElement('span');
+                rewardAmount.className = 'reward-amount';
+                rewardAmount.textContent = '$' + project.reward;
+                
+                rewardRow.appendChild(rewardLabel);
+                rewardRow.appendChild(rewardAmount);
+                
+                var progressRow = document.createElement('div');
+                progressRow.className = 'project-progress';
+                
+                var progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar-container';
+                
+                var progressFill = document.createElement('div');
+                progressFill.className = 'progress-bar';
+                progressFill.style.width = project.progress + '%';
+                
+                var progressText = document.createElement('div');
+                progressText.className = 'progress-text';
+                progressText.textContent = Math.round(project.progress) + '%';
+                
+                progressBar.appendChild(progressFill);
+                progressBar.appendChild(progressText);
+                
+                projectDetails.appendChild(difficultyRow);
+                projectDetails.appendChild(rewardRow);
+                
+                var statusDisplay = document.createElement('div');
+                statusDisplay.className = 'project-status ' + 
+                    (project.progress === 0 ? 'not-started' : 
+                     project.progress < 50 ? 'in-progress' : 
+                     project.progress < 100 ? 'advanced' : 'complete');
+                statusDisplay.textContent = 
+                    project.progress === 0 ? 'Not Started' : 
+                    project.progress < 50 ? 'In Progress' : 
+                    project.progress < 100 ? 'Advanced' : 'Complete';
+                
+                projectDetails.appendChild(statusDisplay);
+                projectDetails.appendChild(progressRow);
+                
+                // Create work button
+                var workButton = document.createElement('button');
+                workButton.className = 'work-on-project-btn';
+                workButton.textContent = 'Work on Project';
+                workButton.setAttribute('data-index', i);
+                
+                var self = this;
+                workButton.addEventListener('click', function() {
+                    var index = parseInt(this.getAttribute('data-index'));
+                    self.switchPanel('coding');
+                    
+                    // Set the project in the dropdown
+                    var projectSelect = document.getElementById('project-select');
+                    if (projectSelect) {
+                        projectSelect.value = index;
+                        
+                        // Trigger change event to update project info
+                        var event = new Event('change');
+                        projectSelect.dispatchEvent(event);
+                        
+                        // Or call the update directly
+                        self.updateCurrentProjectInfo();
+                    }
+                });
+                
+                projectCard.appendChild(projectHeader);
+                projectCard.appendChild(projectDetails);
+                projectCard.appendChild(workButton);
+                
+                activeProjectsList.appendChild(projectCard);
+            }
+        } else {
+            // No active projects
+            var emptyMessage = document.createElement('div');
+            emptyMessage.className = 'empty-message';
+            emptyMessage.textContent = 'No active projects. Check the job board to find new opportunities.';
+            activeProjectsList.appendChild(emptyMessage);
+        }
+        
+        // Also update job board
+        this.updateJobBoard();
+    }
+    
+    // Update the job board with available projects
+    updateJobBoard() {
+        console.log("Updating job board");
+        
+        var jobBoardList = document.getElementById('job-board-list');
+        if (!jobBoardList) {
+            console.error("Could not find job-board-list element");
+            return;
+        }
+        
+        // Clear existing list
+        jobBoardList.innerHTML = '';
+        
+        // Create mock job opportunities if none exist
+        var availableJobs = [
+            {
+                title: "E-commerce Landing Page",
+                type: "Web",
+                description: "Create a clean, modern landing page for an online clothing store.",
+                difficulty: 2,
+                reward: 300
+            },
+            {
+                title: "Blog Article Generator",
+                type: "Tool",
+                description: "Develop a simple script that generates blog article outlines from keywords.",
+                difficulty: 1,
+                reward: 150
+            },
+            {
+                title: "Personal Portfolio Site",
+                type: "Web",
+                description: "Build a professional portfolio site for a graphic designer.",
+                difficulty: 3,
+                reward: 500
+            }
+        ];
+        
+        // Add each job opportunity
+        for (var i = 0; i < availableJobs.length; i++) {
+            var job = availableJobs[i];
+            
+            var jobCard = document.createElement('div');
+            jobCard.className = 'job-card';
+            
+            var jobHeader = document.createElement('div');
+            jobHeader.className = 'job-card-header';
+            
+            var jobTitle = document.createElement('div');
+            jobTitle.className = 'job-card-title';
+            jobTitle.textContent = job.title;
+            
+            var jobType = document.createElement('div');
+            jobType.className = 'job-card-type';
+            jobType.textContent = job.type;
+            
+            jobHeader.appendChild(jobTitle);
+            jobHeader.appendChild(jobType);
+            
+            var jobDescription = document.createElement('div');
+            jobDescription.className = 'job-card-description';
+            jobDescription.textContent = job.description;
+            
+            var jobDetails = document.createElement('div');
+            jobDetails.className = 'job-card-details';
+            
+            var jobDifficulty = document.createElement('div');
+            jobDifficulty.className = 'job-card-difficulty';
+            jobDifficulty.textContent = 'Difficulty: ' + '★'.repeat(job.difficulty) + '☆'.repeat(5 - job.difficulty);
+            
+            var jobReward = document.createElement('div');
+            jobReward.className = 'job-card-reward';
+            jobReward.textContent = 'Reward: $' + job.reward;
+            
+            jobDetails.appendChild(jobDifficulty);
+            jobDetails.appendChild(jobReward);
+            
+            var jobActions = document.createElement('div');
+            jobActions.className = 'job-card-actions';
+            
+            var acceptButton = document.createElement('button');
+            acceptButton.className = 'accept-job-btn';
+            acceptButton.textContent = 'Accept Job';
+            
+            // Store job data for the click handler
+            acceptButton.dataset.job = JSON.stringify(job);
+            
+            var self = this;
+            acceptButton.addEventListener('click', function() {
+                try {
+                    var jobData = JSON.parse(this.dataset.job);
+                    
+                    // Add the job to active projects
+                    if (self.projectManager && typeof self.projectManager.addProject === 'function') {
+                        self.projectManager.addProject({
+                            name: jobData.title,
+                            type: jobData.type,
+                            description: jobData.description,
+                            difficulty: jobData.difficulty,
+                            reward: jobData.reward,
+                            progress: 0,
+                            completed: false
+                        });
+                        
+                        self.showNotification("New project accepted: " + jobData.title, "success");
+                        
+                        // Update the projects list
+                        self.updateActiveProjectsList();
+                    } else {
+                        // Fallback if projectManager is not available
+                        if (!self.gameState.activeProjects) {
+                            self.gameState.activeProjects = [];
+                        }
+                        
+                        self.gameState.activeProjects.push({
+                            name: jobData.title,
+                            type: jobData.type,
+                            description: jobData.description,
+                            difficulty: jobData.difficulty,
+                            reward: jobData.reward,
+                            progress: 0,
+                            completed: false
+                        });
+                        
+                        self.showNotification("New project accepted: " + jobData.title, "success");
+                        
+                        // Update the projects list
+                        self.updateActiveProjectsList();
+                    }
+                    
+                    // Remove this job card
+                    this.closest('.job-card').remove();
+                } catch (error) {
+                    console.error("Error accepting job:", error);
+                    self.showNotification("Failed to accept job", "error");
+                }
+            });
+            
+            jobActions.appendChild(acceptButton);
+            
+            jobCard.appendChild(jobHeader);
+            jobCard.appendChild(jobDescription);
+            jobCard.appendChild(jobDetails);
+            jobCard.appendChild(jobActions);
+            
+            jobBoardList.appendChild(jobCard);
+        }
     }
 } 
