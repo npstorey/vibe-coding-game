@@ -54,6 +54,7 @@ class Game {
         try {
             // Initialize UI with error handling and pass all managers
             this.ui = new UI(this.gameState, this.aiModelManager, this.promptLibrary);
+            this.ui.hardwareManager = this.hardwareManager; // Add hardware manager reference
             
             // Add any missing methods to UI instance to prevent errors
             if (!this.ui.setupMainMenu) {

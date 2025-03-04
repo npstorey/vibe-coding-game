@@ -259,9 +259,20 @@ export class ProjectManager {
                     promptBonus = 0.1;
                 }
                 break;
+            default:
+                promptBonus = 0;
         }
         
+        // Add GPU bonus if a GPU is allocated
+        let gpuBonus = 0;
+        if (hardwareManager && hardwareManager.getGPUStatus && hardwareManager.getGPUStatus().inUse) {
+            gpuBonus = 0.05; // +5% success probability when GPU is allocated
+            console.log("GPU is allocated: +5% success probability bonus");
+        }
+        
+        // Apply all bonuses to success rate
         successRate += promptBonus;
+        successRate += gpuBonus;
         
         // Hardware tier bonus
         // Higher tier hardware than required gives bonus
@@ -281,7 +292,7 @@ export class ProjectManager {
             });
         }
         
-        // Ensure success rate is between 0.1 and 0.95
+        // Clamp success rate between 0.1 and 0.95 (never impossible, never guaranteed)
         successRate = Math.max(0.1, Math.min(0.95, successRate));
         
         // Determine if sprint is successful
@@ -302,7 +313,8 @@ export class ProjectManager {
                 day: this.gameState.day,
                 progress: progressAmount,
                 aiModel: aiModelKey,
-                prompt: promptKey
+                prompt: promptKey,
+                gpuUsed: hardwareManager && hardwareManager.getGPUStatus ? hardwareManager.getGPUStatus().inUse : false
             });
             
             // Increment days taken counter if this is the first sprint today
@@ -326,6 +338,8 @@ export class ProjectManager {
                 progress: project.progress,
                 progressGained: progressAmount,
                 successRate: successRate,
+                gpuUsed: hardwareManager && hardwareManager.getGPUStatus ? hardwareManager.getGPUStatus().inUse : false,
+                gpuBonus: gpuBonus * 100, // Convert to percentage
                 skillGain: {
                     coding: skillGain,
                     prompt: skillGain * 0.8
@@ -371,7 +385,8 @@ export class ProjectManager {
                     progress: 0,
                     aiModel: aiModelKey,
                     prompt: promptKey,
-                    failed: true
+                    failed: true,
+                    gpuUsed: hardwareManager && hardwareManager.getGPUStatus ? hardwareManager.getGPUStatus().inUse : false
                 });
                 
                 // Minimal skill gain even on failure (learning from mistakes)
@@ -384,6 +399,8 @@ export class ProjectManager {
                     progress: project.progress,
                     progressGained: 0,
                     successRate: successRate,
+                    gpuUsed: hardwareManager && hardwareManager.getGPUStatus ? hardwareManager.getGPUStatus().inUse : false,
+                    gpuBonus: gpuBonus * 100, // Convert to percentage
                     message: 'Sprint failed. Try a different approach or AI model.',
                     skillGain: {
                         coding: 0,

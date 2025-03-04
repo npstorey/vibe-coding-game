@@ -67,6 +67,10 @@ export class HardwareManager {
         // Default player hardware
         this.ownedHardware = ['starter-pc'];
         this.cloudCredits = 50;
+        
+        // GPU resource management
+        this.gpuUnits = 1; // Player starts with 1 GPU
+        this.gpuInUse = false; // Initially not in use
     }
     
     // Get all available hardware for purchase
@@ -150,5 +154,46 @@ export class HardwareManager {
         });
         
         return maxTier;
+    }
+    
+    // Get GPU units available to the player
+    getGPUUnits() {
+        return this.gpuUnits;
+    }
+    
+    // Check if a GPU is available for use
+    isGPUAvailable() {
+        return this.gpuUnits > 0 && !this.gpuInUse;
+    }
+    
+    // Allocate a GPU to a project
+    allocateGPU() {
+        if (!this.isGPUAvailable()) {
+            return false;
+        }
+        
+        this.gpuInUse = true;
+        return true;
+    }
+    
+    // Release an allocated GPU
+    releaseGPU() {
+        this.gpuInUse = false;
+        return true;
+    }
+    
+    // Get GPU status information
+    getGPUStatus() {
+        return {
+            units: this.gpuUnits,
+            inUse: this.gpuInUse,
+            statusText: this.gpuInUse ? 'In Use' : 'Available'
+        };
+    }
+    
+    // Upgrade GPU units (for future shop purchases)
+    upgradeGPUUnits(amount = 1) {
+        this.gpuUnits += amount;
+        return this.gpuUnits;
     }
 } 

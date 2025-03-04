@@ -2966,3 +2966,334 @@ input[type="submit"] {
     margin: 10px 0;
     text-align: center;
 }
+
+/* Daily Activities Panel */
+#daily-activities-panel {
+    background-color: rgba(30, 30, 40, 0.85);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px;
+    width: calc(100% - 40px);
+    max-width: 800px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+#daily-activities-panel h2 {
+    color: #fff;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    border-bottom: 1px solid #444;
+    padding-bottom: 10px;
+}
+
+.activities-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.activity-button {
+    background-color: rgba(60, 60, 80, 0.8);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 10px;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.activity-button:hover {
+    background-color: rgba(70, 70, 100, 0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.activity-button.completed {
+    background-color: rgba(40, 40, 60, 0.5);
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+.activity-button.mandatory {
+    border: 2px solid #ff6b6b;
+}
+
+.activity-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.activity-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Health indicator styles */
+.health-stat {
+    position: relative;
+}
+
+#health {
+    color: #4caf50;
+}
+
+#health.warning {
+    color: #ff9800;
+}
+
+#health.danger {
+    color: #f44336;
+}
+
+/* Game Over Modal */
+#game-over-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.game-over-content {
+    background-color: rgba(40, 40, 50, 0.95);
+    padding: 40px;
+    border-radius: 10px;
+    max-width: 500px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.7);
+}
+
+.game-over-content h2 {
+    color: #f44336;
+    font-size: 36px;
+    margin-top: 0;
+}
+
+.game-over-content p {
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.restart-button {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.restart-button:hover {
+    background-color: #388e3c;
+}
+
+/* Essential Activities Menu */
+#essential-activities-menu {
+    position: absolute;
+    top: 120px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+    background-color: rgba(15, 15, 25, 0.8);
+    border-radius: 10px;
+    padding: 10px;
+    border: 1px solid rgba(70, 70, 100, 0.5);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    width: 140px;
+}
+
+.essential-activity {
+    background-color: rgba(30, 30, 40, 0.85);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.essential-activity:hover {
+    background-color: rgba(40, 40, 60, 0.95);
+    transform: translateX(5px);
+}
+
+.essential-activity.completed {
+    background-color: rgba(20, 20, 30, 0.5);
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+.essential-activity.mandatory {
+    border-left: 3px solid #ff6b6b;
+}
+
+.essential-activity .activity-icon {
+    font-size: 20px;
+    margin-right: 10px;
+}
+
+.essential-activity .activity-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Essential Activities in Stats Panel */
+.essential-activities {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+    border-top: 1px solid rgba(70, 70, 100, 0.5);
+    padding-top: 15px;
+}
+
+.essential-activity {
+    background-color: rgba(30, 30, 40, 0.85);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.essential-activity:hover {
+    background-color: rgba(40, 40, 60, 0.95);
+    transform: translateX(5px);
+}
+
+.essential-activity.completed {
+    background-color: rgba(20, 20, 30, 0.5);
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+.essential-activity.mandatory {
+    border-left: 3px solid #ff6b6b;
+}
+
+.essential-activity .activity-icon {
+    font-size: 20px;
+    margin-right: 10px;
+}
+
+.essential-activity .activity-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* GPU Stats Styling */
+.gpu-stat {
+    display: flex;
+    align-items: center;
+}
+
+#gpu-status {
+    font-weight: 500;
+}
+
+#gpu-status:not(.in-use) {
+    color: #4caf50; /* Green for available */
+}
+
+#gpu-status.in-use {
+    color: #f44336; /* Red for in use */
+}
+
+/* GPU allocation toggle in coding panel */
+.gpu-allocation {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.gpu-allocation .toggle-switch {
+    margin-right: 10px;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #4caf50;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.toggle-label {
+    margin-left: 10px;
+    font-size: 14px;
+}
+
+.success-probability-bonus {
+    margin-left: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4caf50;
+}

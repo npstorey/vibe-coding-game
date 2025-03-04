@@ -6,6 +6,7 @@
     <title>Vibe Coding Simulator</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/fallback.css">
+    <link rel="stylesheet" href="css/essential-activities.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -29,6 +30,28 @@
                 <div class="stat">Money: $<span id="money">1000</span></div>
                 <div class="stat">Coding Skill: <span id="coding-skill">1</span></div>
                 <div class="stat">Prompt Skill: <span id="prompt-skill">1</span></div>
+                <div class="stat gpu-stat">GPU: <span id="gpu-units">1</span> (<span id="gpu-status">Available</span>)</div>
+                <div class="stat health-stat">Health: <span id="health">100</span></div>
+                
+                <!-- Essential Activities integrated into stats panel -->
+                <div class="essential-activities">
+                    <button class="essential-activity mandatory" data-activity="eat">
+                        <span class="activity-icon">🍽️</span>
+                        <span class="activity-name">Eat</span>
+                    </button>
+                    <button class="essential-activity mandatory" data-activity="exercise">
+                        <span class="activity-icon">🏃</span>
+                        <span class="activity-name">Exercise</span>
+                    </button>
+                    <button class="essential-activity mandatory" data-activity="work">
+                        <span class="activity-icon">💼</span>
+                        <span class="activity-name">Work</span>
+                    </button>
+                    <button class="essential-activity mandatory" data-activity="sleep">
+                        <span class="activity-icon">😴</span>
+                        <span class="activity-name">Sleep</span>
+                    </button>
+                </div>
             </div>
             
             <div id="computer-screen" class="hidden">
@@ -40,10 +63,6 @@
                         <button class="menu-button" data-action="code" id="code-btn">
                             <span class="menu-icon">💻</span>
                             Code Sprint
-                        </button>
-                        <button class="menu-button" data-action="projects" id="projects-btn">
-                            <span class="menu-icon">📋</span>
-                            Manage Projects
                         </button>
                         <button class="menu-button" data-action="email" id="email-btn">
                             <span class="menu-icon">📧</span>
@@ -60,10 +79,6 @@
                         <button class="menu-button" data-action="resources" id="resources-btn">
                             <span class="menu-icon">📦</span>
                             My Resources
-                        </button>
-                        <button class="menu-button" data-action="end-day" id="end-day-btn">
-                            <span class="menu-icon">🌙</span>
-                            End Day
                         </button>
                     </div>
                     
@@ -116,6 +131,14 @@
                                     <div class="setup-row">
                                         <label for="prompt-technique-select">Prompt Technique:</label>
                                         <select id="prompt-technique-select"></select>
+                                    </div>
+                                    <div class="setup-row gpu-allocation">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="allocate-gpu-toggle">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                        <span class="toggle-label">Allocate GPU</span>
+                                        <span class="success-probability-bonus">(+5% success)</span>
                                     </div>
                                 </div>
                                 <div class="prompt-input-section">
@@ -320,6 +343,14 @@
             <div id="debug-panel" style="position: fixed; top: 10px; right: 10px; z-index: 10000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
                 <button id="debug-show-computer" style="padding: 5px 10px; margin-bottom: 5px; width: 100%;">Show Computer UI</button>
                 <button id="debug-toggle-panels" style="padding: 5px 10px; width: 100%;">Toggle Test Panels</button>
+            </div>
+        </div>
+        
+        <div id="game-over-modal" class="hidden">
+            <div class="game-over-content">
+                <h2>Game Over</h2>
+                <p>Your health has reached zero. Your coding journey has come to an end.</p>
+                <button class="restart-button">Start Over</button>
             </div>
         </div>
     </div>

@@ -14,6 +14,8 @@ export class UI {
         this.uiOverlay = document.getElementById('ui-overlay');
         this.computerScreen = document.getElementById('computer-screen');
         this.statsPanel = document.getElementById('stats-panel');
+        this.essentialActivities = document.querySelector('.essential-activities');
+        this.gameOverModal = document.getElementById('game-over-modal');
         
         // Stats elements
         this.dayCount = document.getElementById('day-count');
@@ -21,6 +23,12 @@ export class UI {
         this.money = document.getElementById('money');
         this.codingSkill = document.getElementById('coding-skill');
         this.promptSkill = document.getElementById('prompt-skill');
+        this.gpuUnits = document.getElementById('gpu-units');
+        this.gpuStatus = document.getElementById('gpu-status');
+        this.healthDisplay = document.getElementById('health');
+        
+        // Add a flag to prevent multiple endDay calls in rapid succession
+        this.endDayInProgress = false;
         
         // Initial UI update
         this.updateStats();
@@ -83,11 +91,37 @@ export class UI {
         
         var self = this;
         
+        // Setup main menu buttons
+        this.setupMainMenu();
+        
+        // Setup essential activities
+        this.initEssentialActivities();
+        
+        // Setup restart button
+        const restartButton = document.querySelector('.restart-button');
+        if (restartButton) {
+            restartButton.addEventListener('click', function() {
+                // Reset game state and restart
+                self.gameState.initializeDefaults();
+                self.updateStats();
+                self.gameOverModal.classList.add('hidden');
+            });
+        }
+        
         // Close computer button
         var closeButton = document.querySelector('.close-button');
         if (closeButton) {
             closeButton.addEventListener('click', function() {
                 self.computerScreen.classList.add('hidden');
+                
+                // Check if all time blocks are used when closing computer
+                if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                    // If all time blocks used, automatically end the day
+                    self.showNotification("All time blocks used! Day is ending...", "info");
+                    setTimeout(() => {
+                        self.handleEndDay();
+                    }, 1500); // Short delay to show the notification
+                }
             });
         }
         
@@ -147,24 +181,76 @@ export class UI {
     
     // Update stats display
     updateStats() {
-        if (this.dayCount) {
-            this.dayCount.textContent = this.gameState.day;
+        // Only proceed if we have necessary UI elements
+        if (!this.gameState) {
+            console.error("Cannot update stats: gameState is not available");
+            return;
         }
         
-        if (this.timeBlocks) {
-            this.timeBlocks.textContent = this.gameState.getAvailableTimeBlocks();
-        }
-        
-        if (this.money) {
-            this.money.textContent = this.gameState.money;
-        }
-        
-        if (this.codingSkill) {
-            this.codingSkill.textContent = Math.floor(this.gameState.skills.coding);
-        }
-        
-        if (this.promptSkill) {
-            this.promptSkill.textContent = Math.floor(this.gameState.skills.prompt);
+        try {
+            if (this.dayCount) {
+                const day = this.gameState.day;
+                this.dayCount.textContent = day;
+                console.log(`updateStats: Setting day counter to ${day}`);
+            }
+            
+            if (this.timeBlocks) {
+                const availableTimeBlocks = this.gameState.getAvailableTimeBlocks();
+                this.timeBlocks.textContent = availableTimeBlocks;
+                console.log(`updateStats: Setting time blocks display to ${availableTimeBlocks}`);
+            }
+            
+            if (this.money) {
+                this.money.textContent = this.gameState.money;
+            }
+            
+            if (this.codingSkill) {
+                this.codingSkill.textContent = this.gameState.skills.coding;
+            }
+            
+            if (this.promptSkill) {
+                this.promptSkill.textContent = this.gameState.skills.prompt;
+            }
+            
+            // Update GPU info if hardwareManager is available
+            if (this.gpuUnits && this.hardwareManager) {
+                const gpuInfo = this.hardwareManager.getGPUStatus();
+                this.gpuUnits.textContent = gpuInfo.units;
+                
+                if (this.gpuStatus) {
+                    this.gpuStatus.textContent = gpuInfo.statusText;
+                    this.gpuStatus.className = '';
+                    if (gpuInfo.inUse) {
+                        this.gpuStatus.classList.add('in-use');
+                    }
+                }
+            }
+            
+            if (this.healthDisplay) {
+                this.healthDisplay.textContent = this.gameState.health;
+                
+                // Update health color based on value
+                this.healthDisplay.className = '';
+                if (this.gameState.health <= 30) {
+                    this.healthDisplay.classList.add('danger');
+                } else if (this.gameState.health <= 60) {
+                    this.healthDisplay.classList.add('warning');
+                }
+                
+                // Check for game over condition
+                if (this.gameState.health <= 0 && this.gameOverModal) {
+                    this.gameOverModal.classList.remove('hidden');
+                }
+            }
+            
+            // Update completed activities
+            this.updateCompletedActivities();
+            
+            // Force a browser reflow to ensure updates are displayed
+            document.body.offsetHeight;
+            
+        } catch (error) {
+            console.error("Error updating stats:", error);
         }
     }
     
@@ -173,6 +259,14 @@ export class UI {
         console.log("Switching to panel: " + panelName);
         
         try {
+            // Check if we're leaving the coding panel and release GPU if needed
+            var codingPanel = document.getElementById('coding-panel');
+            if (codingPanel && !codingPanel.classList.contains('hidden') && 
+                (panelName !== 'coding' && panelName !== 'coding-panel')) {
+                // We're switching away from the coding panel
+                this.releaseGPU();
+            }
+            
             // Hide all panels
             var panels = document.querySelectorAll('.panel, #main-menu');
             for (var i = 0; i < panels.length; i++) {
@@ -222,9 +316,68 @@ export class UI {
     handleEndDay() {
         console.log("Handling end of day");
         
+        // Prevent multiple calls to handleEndDay
+        if (this.endDayInProgress) {
+            console.log("End day already in progress, ignoring duplicate call");
+            return;
+        }
+        
+        // Set flag to prevent duplicate calls
+        this.endDayInProgress = true;
+        
+        // Add logging to track day increments
+        const currentDay = this.gameState.day;
+        console.log(`Current day before endDay: ${currentDay}`);
+        
+        // End the day - this will advance to the next day
         this.gameState.endDay();
-        this.showNotification("Day ended. A new day begins!", "info");
+        
+        // Get the new day value
+        const newDay = this.gameState.day;
+        console.log(`New day after endDay: ${newDay}`);
+        
+        // Force immediate update of day counter in UI
+        if (this.dayCount) {
+            console.log(`Updating day counter in UI from ${this.dayCount.textContent} to ${newDay}`);
+            this.dayCount.textContent = newDay;
+        }
+        
+        // Update time blocks counter immediately
+        if (this.timeBlocks) {
+            const availableTimeBlocks = this.gameState.getAvailableTimeBlocks();
+            console.log(`Updating time blocks in UI to ${availableTimeBlocks}`);
+            this.timeBlocks.textContent = availableTimeBlocks;
+        }
+        
+        // Show notification about day change
+        this.showNotification(`Day ${currentDay} ended. Day ${newDay} begins!`, "info");
+        
+        // Update all UI elements
         this.updateStats();
+        this.updateCompletedActivities();
+        
+        // Force another update after a brief delay to ensure UI is refreshed
+        setTimeout(() => {
+            if (this.dayCount) {
+                console.log(`Delayed update: Ensuring day counter shows ${newDay}`);
+                this.dayCount.textContent = newDay;
+            }
+            
+            if (this.timeBlocks) {
+                const availableTimeBlocks = this.gameState.getAvailableTimeBlocks();
+                console.log(`Delayed update: Ensuring time blocks counter shows ${availableTimeBlocks}`);
+                this.timeBlocks.textContent = availableTimeBlocks;
+            }
+            
+            // Update all stats again to be safe
+            this.updateStats();
+        }, 50);
+        
+        // Reset flag after a short delay
+        setTimeout(() => {
+            this.endDayInProgress = false;
+            console.log("UI end day complete, flag reset");
+        }, 1000);
     }
     
     // Handle prompt submission
@@ -233,7 +386,9 @@ export class UI {
         
         var projectSelect = document.getElementById('project-select');
         var aiModelSelect = document.getElementById('ai-model-select');
+        var promptTechniqueSelect = document.getElementById('prompt-technique-select');
         var promptInput = document.getElementById('prompt-input');
+        var allocateGpuToggle = document.getElementById('allocate-gpu-toggle');
         
         if (!projectSelect || !aiModelSelect || !promptInput) {
             this.showNotification("Missing UI elements for prompt submission", "error");
@@ -245,31 +400,164 @@ export class UI {
             return;
         }
         
-        // Simplified for now
+        // Check for GPU allocation request
+        var gpuAllocated = false;
+        if (allocateGpuToggle && allocateGpuToggle.checked && this.hardwareManager) {
+            // Attempt to allocate GPU
+            if (this.hardwareManager.isGPUAvailable()) {
+                gpuAllocated = this.hardwareManager.allocateGPU();
+                console.log("GPU allocation requested, result:", gpuAllocated);
+                
+                // Update GPU status in UI
+                this.updateStats();
+            } else {
+                this.showNotification("GPU is not available for allocation", "warning");
+            }
+        }
+        
+        // Note: We don't deduct time blocks here since they're already deducted when entering the coding panel
+        console.log("Processing prompt without additional time block deduction. Current time blocks:", this.gameState.getAvailableTimeBlocks());
+        
+        // Get project and model selections
+        var projectIndex = parseInt(projectSelect.value);
+        var aiModelKey = aiModelSelect.value;
+        var promptTechniqueKey = promptTechniqueSelect ? promptTechniqueSelect.value : 'basic-instruction';
+        
+        // Check if we have a valid project manager and project selection
+        if (!this.projectManager || isNaN(projectIndex) || projectIndex < 0) {
+            // Fall back to simplified behavior
+            this.showNotification("Processing your prompt...", "info");
+            this.simulatePromptProcessing();
+            return;
+        }
+        
+        // Use the project manager to update project progress
+        console.log("Using project manager to update project progress", {
+            projectIndex,
+            aiModelKey,
+            promptTechniqueKey
+        });
+        
         this.showNotification("Processing your prompt...", "info");
         
-        // Simulate processing delay for better UX
         var self = this;
         setTimeout(function() {
-            self.showNotification("Code generated successfully!", "success");
-            
-            // Update coding results
-            var codingResults = document.getElementById('coding-results');
-            if (codingResults) {
-                var result = document.createElement('div');
-                result.className = 'coding-result success';
-                result.innerHTML = '<div class="result-header"><div class="result-status success">SUCCESS</div><div class="result-timestamp">' + 
-                    new Date().toLocaleTimeString() + '</div></div>' +
-                    '<div class="result-message">Your code was generated successfully.</div>' +
-                    '<div class="code-container"><pre><code>// Generated code example\nfunction example() {\n  console.log("Success!");\n}</code></pre></div>';
+            // Try to use projectManager for actual logic
+            try {
+                var result = self.projectManager.updateProjectProgress(
+                    projectIndex, 
+                    aiModelKey, 
+                    promptTechniqueKey,
+                    self.hardwareManager
+                );
                 
-                if (codingResults.firstChild) {
-                    codingResults.insertBefore(result, codingResults.firstChild);
+                console.log("Project progress update result:", result);
+                
+                if (result.success) {
+                    if (result.completed) {
+                        self.showNotification(`Project completed! You earned $${result.reward}`, "success");
+                    } else if (result.isSprintSuccess) {
+                        self.showNotification(`Success! Made ${result.progressGained}% progress on the project.${result.gpuUsed ? ' (GPU boost applied)' : ''}`, "success");
+                    } else {
+                        self.showNotification(result.message || "Partial success or failure in the coding sprint.", "warning");
+                    }
+                    
+                    // Add to coding results
+                    self.addCodingResult(result, promptInput.value);
+                    
+                    // Update UI
+                    self.updateStats();
+                    self.updateCurrentProjectInfo();
+                    self.updateCompletedProjectsList();
+                    self.updateActiveProjectsList();
                 } else {
-                    codingResults.appendChild(result);
+                    self.showNotification(result.message || "Error updating project progress", "error");
                 }
+            } catch (error) {
+                console.error("Error in project progress update:", error);
+                self.showNotification("An error occurred during the coding sprint.", "error");
+                self.simulatePromptProcessing(); // Fall back to simplified behavior
             }
+            
+            // Clear the prompt input field
+            promptInput.value = '';
         }, 1500);
+    }
+    
+    // Simplified fallback for prompt processing
+    simulatePromptProcessing() {
+        var codingResults = document.getElementById('coding-results');
+        if (codingResults) {
+            var result = document.createElement('div');
+            result.className = 'coding-result success';
+            result.innerHTML = '<div class="result-header"><div class="result-status success">SUCCESS</div><div class="result-timestamp">' + 
+                new Date().toLocaleTimeString() + '</div></div>' +
+                '<div class="result-message">Your code was generated successfully.</div>' +
+                '<div class="code-container"><pre><code>// Generated code example\nfunction example() {\n  console.log("Success!");\n}</code></pre></div>';
+            
+            if (codingResults.firstChild) {
+                codingResults.insertBefore(result, codingResults.firstChild);
+            } else {
+                codingResults.appendChild(result);
+            }
+        }
+    }
+    
+    // Add coding result to the coding panel
+    addCodingResult(result, promptText) {
+        var codingResults = document.getElementById('coding-results');
+        if (!codingResults) return;
+        
+        var resultCard = document.createElement('div');
+        resultCard.className = 'coding-result ' + (result.isSprintSuccess ? 'success' : 'partial-success');
+        
+        var statusText = result.isSprintSuccess ? 'SUCCESS' : (result.progressGained > 0 ? 'PARTIAL SUCCESS' : 'FAILURE');
+        var statusClass = result.isSprintSuccess ? 'success' : (result.progressGained > 0 ? 'partial-success' : 'failure');
+        
+        var gpuInfo = result.gpuUsed ? `<div class="detail-item">
+            <div class="detail-label">GPU Used:</div>
+            <div class="detail-value">Yes (+${result.gpuBonus.toFixed(0)}% success)</div>
+        </div>` : '';
+        
+        resultCard.innerHTML = `
+            <div class="result-header">
+                <div class="result-status ${statusClass}">${statusText}</div>
+                <div class="result-timestamp">${new Date().toLocaleTimeString()}</div>
+            </div>
+            <div class="result-message">
+                ${result.isSprintSuccess ? 
+                    `Great work! Your code sprint was successful.` : 
+                    (result.message || 'Your code sprint had mixed results.')}
+            </div>
+            <div class="result-details">
+                <div class="detail-item">
+                    <div class="detail-label">Progress:</div>
+                    <div class="detail-value">+${result.progressGained}%</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Success Rate:</div>
+                    <div class="detail-value">${Math.round(result.successRate * 100)}%</div>
+                </div>
+                ${gpuInfo}
+                <div class="detail-item">
+                    <div class="detail-label">Skills Gained:</div>
+                    <div class="detail-value">
+                        Coding: +${result.skillGain.coding.toFixed(1)}, 
+                        Prompt: +${result.skillGain.prompt.toFixed(1)}
+                    </div>
+                </div>
+            </div>
+            <div class="prompt-container">
+                <div class="prompt-header">Your Prompt:</div>
+                <div class="prompt-text">${promptText}</div>
+            </div>
+        `;
+        
+        if (codingResults.firstChild) {
+            codingResults.insertBefore(resultCard, codingResults.firstChild);
+        } else {
+            codingResults.appendChild(resultCard);
+        }
     }
     
     // Show notification
@@ -402,18 +690,172 @@ export class UI {
     
     // Set up the main menu
     setupMainMenu() {
-        console.log("Setting up main menu");
+        var self = this;
         
-        var mainMenu = document.getElementById('main-menu');
-        if (mainMenu) {
-            // Hide all panels
-            var panels = document.querySelectorAll('.panel');
-            for (var i = 0; i < panels.length; i++) {
-                panels[i].classList.add('hidden');
-            }
+        // Main menu button handlers
+        var codeBtn = document.getElementById('code-btn');
+        if (codeBtn) {
+            // Remove previous event listeners to prevent duplicates
+            codeBtn.replaceWith(codeBtn.cloneNode(true));
+            codeBtn = document.getElementById('code-btn');
             
-            // Show main menu
-            mainMenu.classList.remove('hidden');
+            codeBtn.addEventListener('click', function() {
+                console.log("Code Sprint button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                    console.log("Time block deducted for Code Sprint - remaining:", self.gameState.getAvailableTimeBlocks());
+                    
+                    // Immediately update the time blocks counter in the UI
+                    if (self.timeBlocks) {
+                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                    }
+                    
+                    self.switchPanel('coding-panel');
+                    self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
+                    self.updateStats();
+                    
+                    // Force a redraw for browsers that might batch updates
+                    setTimeout(() => {
+                        // Update again after a small delay to ensure UI is refreshed
+                        if (self.timeBlocks) {
+                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                        }
+                    }, 50);
+                    
+                    // Check if all time blocks are used
+                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                    }
+                } else {
+                    self.showNotification("Not enough time blocks left!", "error");
+                }
+            });
+        }
+        
+        var emailBtn = document.getElementById('email-btn');
+        if (emailBtn) {
+            // Remove previous event listeners to prevent duplicates
+            emailBtn.replaceWith(emailBtn.cloneNode(true));
+            emailBtn = document.getElementById('email-btn');
+            
+            emailBtn.addEventListener('click', function() {
+                console.log("Email button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                    console.log("Time block deducted for Email - remaining:", self.gameState.getAvailableTimeBlocks());
+                    
+                    // Immediately update the time blocks counter in the UI
+                    if (self.timeBlocks) {
+                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                    }
+                    
+                    self.switchPanel('email-panel');
+                    self.updateEmailList();
+                    self.showNotification("Checking email! (Used 1 Time Block)", "info");
+                    self.updateStats();
+                    
+                    // Force a redraw for browsers that might batch updates
+                    setTimeout(() => {
+                        // Update again after a small delay to ensure UI is refreshed
+                        if (self.timeBlocks) {
+                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                        }
+                    }, 50);
+                    
+                    // Check if all time blocks are used
+                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                    }
+                } else {
+                    self.showNotification("Not enough time blocks left!", "error");
+                }
+            });
+        }
+        
+        var socialBtn = document.getElementById('social-btn');
+        if (socialBtn) {
+            // Remove previous event listeners to prevent duplicates
+            socialBtn.replaceWith(socialBtn.cloneNode(true));
+            socialBtn = document.getElementById('social-btn');
+            
+            socialBtn.addEventListener('click', function() {
+                console.log("Social button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                    console.log("Time block deducted for Social - remaining:", self.gameState.getAvailableTimeBlocks());
+                    
+                    // Immediately update the time blocks counter in the UI
+                    if (self.timeBlocks) {
+                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                    }
+                    
+                    self.switchPanel('social-panel');
+                    self.initSocialPanel();
+                    self.showNotification("Scrolling social media! (Used 1 Time Block)", "info");
+                    self.updateStats();
+                    
+                    // Force a redraw for browsers that might batch updates
+                    setTimeout(() => {
+                        // Update again after a small delay to ensure UI is refreshed
+                        if (self.timeBlocks) {
+                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                        }
+                    }, 50);
+                    
+                    // Check if all time blocks are used
+                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                    }
+                } else {
+                    self.showNotification("Not enough time blocks left!", "error");
+                }
+            });
+        }
+        
+        var shopBtn = document.getElementById('shop-btn');
+        if (shopBtn) {
+            // Remove previous event listeners to prevent duplicates
+            shopBtn.replaceWith(shopBtn.cloneNode(true));
+            shopBtn = document.getElementById('shop-btn');
+            
+            shopBtn.addEventListener('click', function() {
+                console.log("Shop button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                    console.log("Time block deducted for Shop - remaining:", self.gameState.getAvailableTimeBlocks());
+                    
+                    // Immediately update the time blocks counter in the UI
+                    if (self.timeBlocks) {
+                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                    }
+                    
+                    self.switchPanel('shop-panel');
+                    self.showNotification("Browsing the shop! (Used 1 Time Block)", "info");
+                    self.updateStats();
+                    
+                    // Force a redraw for browsers that might batch updates
+                    setTimeout(() => {
+                        // Update again after a small delay to ensure UI is refreshed
+                        if (self.timeBlocks) {
+                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                        }
+                    }, 50);
+                    
+                    // Check if all time blocks are used
+                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                    }
+                } else {
+                    self.showNotification("Not enough time blocks left!", "error");
+                }
+            });
+        }
+        
+        var resourcesBtn = document.getElementById('resources-btn');
+        if (resourcesBtn) {
+            // Remove previous event listeners to prevent duplicates
+            resourcesBtn.replaceWith(resourcesBtn.cloneNode(true));
+            resourcesBtn = document.getElementById('resources-btn');
+            
+            resourcesBtn.addEventListener('click', function() {
+                self.switchPanel('resources-panel');
+            });
         }
     }
     
@@ -677,6 +1119,24 @@ export class UI {
         if (!aiModelSelect) {
             console.error("AI model select element not found");
             return;
+        }
+        
+        // Initialize GPU toggle
+        var gpuToggle = document.getElementById('allocate-gpu-toggle');
+        if (gpuToggle) {
+            // Reset toggle to unchecked state when initializing the panel
+            gpuToggle.checked = false;
+            
+            // Disable toggle if GPU is not available
+            if (this.hardwareManager && !this.hardwareManager.isGPUAvailable()) {
+                gpuToggle.disabled = true;
+                gpuToggle.parentElement.classList.add('disabled');
+                gpuToggle.parentElement.title = "No GPU available";
+            } else {
+                gpuToggle.disabled = false;
+                gpuToggle.parentElement.classList.remove('disabled');
+                gpuToggle.parentElement.title = "Allocate GPU to increase success chance by 5%";
+            }
         }
         
         // Clear current options
@@ -1181,6 +1641,158 @@ export class UI {
             jobCard.appendChild(jobActions);
             
             jobBoardList.appendChild(jobCard);
+        }
+    }
+    
+    // Initialize essential activities
+    initEssentialActivities() {
+        const activityButtons = document.querySelectorAll('.essential-activities .essential-activity');
+        const self = this;
+        
+        activityButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const activity = this.getAttribute('data-activity');
+                
+                // Special handling for sleep - immediately end the day without using a time block
+                if (activity === 'sleep') {
+                    console.log("Sleep selected - ending day without time block deduction");
+                    
+                    // Capture current day for reference
+                    const currentDay = self.gameState.day;
+                    console.log(`Sleep clicked on day ${currentDay}`);
+                    
+                    // Handle ending the day
+                    self.handleEndDay();
+                    
+                    // Force immediate day counter update
+                    const newDay = self.gameState.day;
+                    if (self.dayCount) {
+                        console.log(`Sleep: Directly updating day counter from ${currentDay} to ${newDay}`);
+                        self.dayCount.textContent = newDay;
+                    }
+                    
+                    // Close computer screen if open
+                    if (self.computerScreen && !self.computerScreen.classList.contains('hidden')) {
+                        self.computerScreen.classList.add('hidden');
+                    }
+                    
+                    // Do an additional forced update after a brief delay
+                    setTimeout(() => {
+                        if (self.dayCount) {
+                            console.log(`Sleep: Delayed update of day counter to ensure it shows ${newDay}`);
+                            self.dayCount.textContent = newDay;
+                        }
+                        self.updateStats();
+                    }, 100);
+                    
+                    return;
+                }
+                
+                // For non-sleep activities, handle normally
+                
+                // Prevent action if the button is already marked as completed
+                if (this.classList.contains('completed')) {
+                    self.showNotification("You've already done this activity today.", "warning");
+                    return;
+                }
+                
+                // Get current time blocks before deduction for debugging
+                const beforeTimeBlocks = self.gameState.getAvailableTimeBlocks();
+                console.log(`Before ${activity}: ${beforeTimeBlocks} time blocks available`);
+                
+                // Use a time block for the activity
+                if (self.gameState.useTimeBlock(1)) {
+                    // Mark activity as completed
+                    if (['eat', 'exercise', 'work'].includes(activity)) {
+                        self.gameState.completedActivities[activity] = true;
+                    }
+                    
+                    // Mark button as completed immediately to prevent double-clicking
+                    this.classList.add('completed');
+                    
+                    // Immediately update the time blocks counter in the UI
+                    const afterTimeBlocks = self.gameState.getAvailableTimeBlocks();
+                    if (self.timeBlocks) {
+                        self.timeBlocks.textContent = afterTimeBlocks;
+                    }
+                    console.log(`After ${activity}: ${afterTimeBlocks} time blocks available`);
+                    
+                    // For non-sleep activities, just show notifications
+                    self.showNotification(`Completed: ${activity}`, "success");
+                    
+                    // Do a full UI update
+                    self.updateStats();
+                    
+                    // Force a redraw for browsers that might batch updates
+                    setTimeout(() => {
+                        // Update again after a small delay to ensure UI is refreshed
+                        if (self.timeBlocks) {
+                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                        }
+                    }, 50);
+                    
+                    // Log the activity and remaining time blocks
+                    console.log(`Activity ${activity} completed. Remaining time blocks: ${self.gameState.getAvailableTimeBlocks()}`);
+                    
+                    // Check if all time blocks are used (for auto-end day)
+                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                        // If all time blocks used, automatically end the day
+                        self.showNotification("All time blocks used! Day is ending...", "info");
+                        setTimeout(() => {
+                            self.handleEndDay();
+                            // Close computer screen if open
+                            if (self.computerScreen && !self.computerScreen.classList.contains('hidden')) {
+                                self.computerScreen.classList.add('hidden');
+                            }
+                        }, 1500); // Short delay to show the notification
+                    }
+                } else {
+                    self.showNotification("No time blocks left! Choose sleep to end the day.", "warning");
+                }
+            });
+        });
+    }
+    
+    // Update completed activities visual state
+    updateCompletedActivities() {
+        const activityButtons = document.querySelectorAll('.essential-activities .essential-activity');
+        
+        // Reset all buttons - important when a new day starts
+        activityButtons.forEach(button => {
+            button.classList.remove('completed');
+            console.log(`Reset completed state for ${button.getAttribute('data-activity')}`);
+        });
+        
+        // Mark mandatory activities as completed based on game state
+        for (const activity in this.gameState.completedActivities) {
+            if (this.gameState.completedActivities[activity]) {
+                const button = document.querySelector(`.essential-activities .essential-activity[data-activity="${activity}"]`);
+                if (button) {
+                    button.classList.add('completed');
+                    console.log(`Marked ${activity} as completed`);
+                }
+            }
+        }
+        
+        // Disable all buttons except sleep if no time blocks left
+        if (this.gameState.getAvailableTimeBlocks() <= 0) {
+            activityButtons.forEach(button => {
+                const activity = button.getAttribute('data-activity');
+                if (activity !== 'sleep') {
+                    button.classList.add('completed');
+                    console.log(`No time blocks left, disabled ${activity}`);
+                }
+            });
+        }
+    }
+    
+    // Release allocated GPU
+    releaseGPU() {
+        if (this.hardwareManager && this.hardwareManager.getGPUStatus().inUse) {
+            console.log("Releasing allocated GPU");
+            this.hardwareManager.releaseGPU();
+            this.updateStats();
+            this.showNotification("GPU resources released", "info");
         }
     }
 } 
