@@ -11,6 +11,9 @@ export class GameState {
             // Initialize with default values
             this.initializeDefaults();
         }
+        
+        // Add flag to prevent multiple end day calls
+        this.endDayInProgress = false;
     }
     
     // Initialize default game state values
@@ -20,6 +23,15 @@ export class GameState {
         this.timeBlocks = 8; // Time blocks available per day
         this.timeBlocksUsed = 0;
         this.money = 1000;
+        this.health = 100; // Player's health starts at 100
+        
+        // Track completed activities for the current day
+        this.completedActivities = {
+            eat: false,
+            exercise: false,
+            work: false,
+            sleep: false
+        };
         
         // Player skills
         this.skills = {
@@ -49,7 +61,7 @@ export class GameState {
         
         // Projects being worked on
         this.projects = [];
-        this.activeProjects = [];
+        this.activeProjects = []; // Active projects the player is working on
         
         // Completed projects
         this.completedProjects = [];
@@ -79,31 +91,88 @@ export class GameState {
     // Use a time block for an action
     useTimeBlock(amount = 1) {
         if (this.timeBlocks - this.timeBlocksUsed < amount) {
+            console.log(`Cannot use ${amount} time blocks, only ${this.timeBlocks - this.timeBlocksUsed} available`);
             return false; // Not enough time blocks
         }
         
         this.timeBlocksUsed += amount;
-        // Add to events log
+        console.log(`Used ${amount} time block(s). ${this.timeBlocks - this.timeBlocksUsed} remaining.`);
+        
+        // Record this action in today's events
         this.todayEvents.push({
-            type: 'time_used',
+            type: 'time_block_used',
             amount: amount,
             remaining: this.timeBlocks - this.timeBlocksUsed
         });
         
-        // Try to save state after changes
+        // Auto-save state after using time block
         this.saveState();
+        
         return true;
     }
     
     // Check available time blocks
     getAvailableTimeBlocks() {
-        return this.timeBlocks - this.timeBlocksUsed;
+        const available = this.timeBlocks - this.timeBlocksUsed;
+        console.log(`Available time blocks: ${available}`);
+        return available;
     }
     
     // End the current day
     endDay() {
+        // Prevent multiple calls to endDay at the same time
+        if (this.endDayInProgress) {
+            console.log("End day already in progress, ignoring duplicate call");
+            return;
+        }
+        
+        // Set flag to indicate day ending is in progress
+        this.endDayInProgress = true;
+        
+        console.log(`***** ENDING DAY ${this.day} *****`);
+        
+        // Check for skipped mandatory activities and reduce health
+        const mandatoryActivities = ['eat', 'exercise', 'work'];  // Don't check sleep - it's how we end day
+        const skippedActivities = [];
+        
+        for (const activity of mandatoryActivities) {
+            if (!this.completedActivities[activity]) {
+                // Each skipped mandatory activity reduces health by 15
+                this.health -= 15;
+                skippedActivities.push(activity);
+                
+                // Add to events log
+                this.todayEvents.push({
+                    type: 'health_loss',
+                    activity: activity,
+                    amount: 15,
+                    description: `Skipped ${activity}: -15 health`
+                });
+            }
+        }
+        
+        // Cap health at 0 (don't go negative)
+        if (this.health < 0) {
+            this.health = 0;
+        }
+        
+        // Reset completed activities for the next day
+        for (const activity in this.completedActivities) {
+            this.completedActivities[activity] = false;
+        }
+        
+        // Increment day counter
+        const oldDay = this.day;
         this.day++;
+        console.log(`Day counter incremented from ${oldDay} to ${this.day}`);
+        
+        // Reset time blocks for the new day
         this.timeBlocksUsed = 0;
+        console.log(`Time blocks reset for day ${this.day}: ${this.timeBlocks} available`);
+        
+        // Save state after ending the day
+        this.saveState();
+        console.log(`Game state saved for day ${this.day}`);
         
         // Apply daily expenses (basic living costs)
         this.money -= 50; // $50 per day living expenses
@@ -163,6 +232,12 @@ export class GameState {
             // Handle game over or special events when out of money
             return { status: 'bankrupt', events: eventsLog };
         }
+        
+        // Clear the end day flag
+        setTimeout(() => {
+            this.endDayInProgress = false;
+            console.log("End day complete, flag reset");
+        }, 500);
         
         return { status: 'success', events: eventsLog };
     }

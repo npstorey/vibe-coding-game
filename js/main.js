@@ -55,6 +55,7 @@ class Game {
             // Initialize UI with error handling and pass all managers
             this.ui = new UI(this.gameState, this.aiModelManager, this.promptLibrary);
             this.ui.hardwareManager = this.hardwareManager; // Add hardware manager reference
+            this.ui.socialMediaManager = this.socialMediaManager; // Make sure socialMediaManager is directly available
             
             // Add any missing methods to UI instance to prevent errors
             if (!this.ui.setupMainMenu) {
@@ -1036,6 +1037,21 @@ class Game {
             if (objectType === 'computer') {
                 console.log("Computer clicked, displaying computer screen");
                 
+                // Check scene container state before changing anything
+                const sceneContainer = document.getElementById('scene-container');
+                if (sceneContainer) {
+                    console.log("Scene container before showing computer:", {
+                        display: sceneContainer.style.display,
+                        visibility: sceneContainer.style.visibility,
+                        className: sceneContainer.className
+                    });
+                    
+                    // Make sure scene container stays visible
+                    sceneContainer.style.display = 'block';
+                    sceneContainer.style.visibility = 'visible';
+                    sceneContainer.classList.remove('hidden');
+                }
+                
                 // Show computer screen
                 const computerScreen = document.getElementById('computer-screen');
                 if (computerScreen) {
@@ -1235,10 +1251,39 @@ class Game {
             if (closeBtn) {
                 closeBtn.addEventListener('click', (e) => {
                     console.log("Close button clicked");
+                    
+                    // Check scene container state before changing anything
+                    const sceneContainer = document.getElementById('scene-container');
+                    if (sceneContainer) {
+                        console.log("Scene container before closing computer:", {
+                            display: sceneContainer.style.display,
+                            visibility: sceneContainer.style.visibility,
+                            className: sceneContainer.className
+                        });
+                    }
+                    
                     const computerScreen = document.getElementById('computer-screen');
                     if (computerScreen) {
                         computerScreen.classList.add('hidden');
                         computerScreen.style.display = 'none';
+                        
+                        // Ensure the scene container is still visible when closing the computer
+                        if (sceneContainer) {
+                            sceneContainer.style.display = 'block';
+                            sceneContainer.style.visibility = 'visible';
+                            sceneContainer.classList.remove('hidden');
+                            console.log("Ensuring scene container remains visible after closing computer");
+                            
+                            // Log the state after changes
+                            console.log("Scene container after fixing:", {
+                                display: sceneContainer.style.display,
+                                visibility: sceneContainer.style.visibility,
+                                className: sceneContainer.className
+                            });
+                            
+                            // Force a reflow
+                            void sceneContainer.offsetHeight;
+                        }
                     }
                 });
             }
@@ -1250,60 +1295,31 @@ class Game {
                     const action = button.getAttribute('data-action');
                     console.log(`Menu button clicked: ${action}`);
                     
-                    // Prevent any default behavior
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Call the UI's switchPanel method if available
-                    if (this.ui && typeof this.ui.switchPanel === 'function') {
-                        console.log(`Calling UI.switchPanel('${action}')`);
-                        this.ui.switchPanel(action);
-                        return;
+                    // Ensure the ui panels are initialized
+                    if (this.ui) {
+                        // Make sure the UI has been fully initialized with managers
+                        if (!this.ui.socialMediaManager && this.socialMediaManager) {
+                            console.log("Initializing UI with managers that were missing");
+                            this.ui.initEvents(
+                                this.projectManager, 
+                                this.socialMediaManager,
+                                this.hardwareManager,
+                                this.shopManager,
+                                this.resourceManager
+                            );
+                        }
                     }
                     
-                    // Fallback if UI method not available
-                    
-                    // Hide all panels
-                    document.querySelectorAll('.panel').forEach(panel => {
-                        panel.classList.add('hidden');
-                        panel.style.display = 'none';
-                    });
-                    
-                    // Hide main menu
-                    const mainMenu = document.getElementById('main-menu');
-                    if (mainMenu) {
-                        mainMenu.classList.add('hidden');
-                        mainMenu.style.display = 'none';
-                    }
-                    
-                    // Show the requested panel
-                    if (action === 'end-day') {
-                        // Handle end day logic
-                        if (this.ui && typeof this.ui.handleEndDay === 'function') {
-                            this.ui.handleEndDay();
+                    // Handle specific actions
+                    if (action === 'email') {
+                        // Make sure the UI updates email list when clicking
+                        if (this.ui && typeof this.ui.updateEmailList === 'function') {
+                            this.ui.updateEmailList();
                         }
-                        // Return to main menu after handling end-day
-                        if (mainMenu) {
-                            mainMenu.classList.remove('hidden');
-                            mainMenu.style.display = 'block';
-                        }
-                    } else {
-                        // Regular panel switching
-                        const panelId = `${action}-panel`;
-                        const panel = document.getElementById(panelId);
-                        if (panel) {
-                            panel.classList.remove('hidden');
-                            panel.style.display = 'block';
-                            
-                            // Update related content
-                            this.updatePanelContent(action);
-                        } else {
-                            console.error(`Panel not found: ${panelId}`);
-                            // Return to main menu if panel not found
-                            if (mainMenu) {
-                                mainMenu.classList.remove('hidden');
-                                mainMenu.style.display = 'block';
-                            }
+                    } else if (action === 'social') {
+                        // Make sure the UI initializes social panel when clicking
+                        if (this.ui && typeof this.ui.initSocialPanel === 'function') {
+                            this.ui.initSocialPanel();
                         }
                     }
                 });
@@ -1943,7 +1959,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Try to initialize with fallback mechanisms
+        // Try to initialize with fallbacks
         initializeWithFallbacks(error);
     }
 }); 
