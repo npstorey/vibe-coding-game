@@ -641,7 +641,7 @@ button:hover {
 }
 
 #submit-prompt-btn {
-    background: linear-gradient(135deg, var(--accent-glow), #1e7dc5);
+    background: linear-gradient(135deg, #2c3e50, #4b6cb7);
     color: white;
     border: none;
     border-radius: 8px;
@@ -674,7 +674,7 @@ button:hover {
 }
 
 #submit-prompt-btn:hover {
-    background: linear-gradient(135deg, #1e7dc5, var(--accent-glow));
+    background: linear-gradient(135deg, #4b6cb7, #2c3e50);
     box-shadow: 0 0 20px rgba(54, 181, 255, 0.5);
     transform: translateY(-2px);
 }
@@ -3390,4 +3390,797 @@ input:checked + .toggle-slider:before {
     0% { box-shadow: 0 0 0 0 rgba(var(--accent-primary-rgb), 0.4); }
     70% { box-shadow: 0 0 0 6px rgba(var(--accent-primary-rgb), 0); }
     100% { box-shadow: 0 0 0 0 rgba(var(--accent-primary-rgb), 0); }
+}
+
+/* Sprint Timer and Success Probability Display Styles */
+#sprint-info-container {
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#sprint-info-container.hidden {
+    display: none;
+}
+
+.sprint-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.detail-label {
+    font-weight: bold;
+    color: var(--terminal-text);
+}
+
+.detail-value {
+    font-weight: bold;
+    color: var(--accent-glow);
+}
+
+#sprint-timer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.timer-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.timer-circle svg {
+    transform: rotate(-90deg);
+    overflow: visible;
+}
+
+.timer-circle svg circle {
+    transition: stroke-dashoffset 0.1s linear, stroke 0.5s ease;
+}
+
+.timer-circle svg circle:first-child {
+    stroke-opacity: 0.2;
+}
+
+.timer-circle svg circle:last-child {
+    stroke-dasharray: 339.3; /* 2πr where r=54 */
+    stroke-dashoffset: 0;
+}
+
+.timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--terminal-green);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.timer-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    width: 100%;
+}
+
+#yolo-btn {
+    background: linear-gradient(135deg, #ff6a00, #ee0979);
+    font-weight: bold;
+    animation: yoloPulse 1.5s infinite;
+}
+
+#yolo-btn.hidden {
+    display: none;
+}
+
+@keyframes yoloPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(238, 9, 121, 0.7);
+    }
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(238, 9, 121, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(238, 9, 121, 0);
+    }
+}
+
+#sprint-result {
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+#sprint-result.hidden {
+    display: none;
+}
+
+#sprint-result.success {
+    background: rgba(0, 255, 128, 0.1);
+    border: 1px solid var(--terminal-green);
+}
+
+#sprint-result.failure {
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid #ff3333;
+}
+
+#result-message {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#result-details {
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: var(--terminal-text);
+}
+
+#continue-btn {
+    margin-top: 10px;
+}
+
+/* Change prompt execution button to match the sprint flow */
+#submit-prompt-btn {
+    background: linear-gradient(135deg, #2c3e50, #4b6cb7);
+}
+
+#submit-prompt-btn:hover {
+    background: linear-gradient(135deg, #4b6cb7, #2c3e50);
+}
+
+/* Sprint success probability colors */
+#sprint-success-prob.low {
+    color: #ff3333;
+}
+
+#sprint-success-prob.medium {
+    color: #ffcc00;
+}
+
+#sprint-success-prob.high {
+    color: var(--terminal-green);
+}
+
+/* New Code Sprint Interface Styles */
+.coding-interface-container {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    height: calc(60vh - 120px);
+}
+
+/* Project Cards Section */
+.project-cards-container {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    overflow-y: auto;
+    max-width: 40%;
+}
+
+.project-cards-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--terminal-text);
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#project-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.project-card {
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.project-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-glow);
+}
+
+.project-card.selected {
+    border: 2px solid var(--terminal-green);
+    background: linear-gradient(rgba(0, 0, 0, 0), rgba(94, 234, 212, 0.1));
+}
+
+.project-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.project-card-title {
+    font-weight: bold;
+    font-size: 16px;
+    color: white;
+}
+
+.project-card-type {
+    font-size: 12px;
+    padding: 3px 8px;
+    background-color: rgba(94, 234, 212, 0.2);
+    border-radius: 12px;
+    color: var(--terminal-green);
+}
+
+.project-card-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.project-card-detail {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-name {
+    font-size: 12px;
+    color: var(--terminal-text);
+}
+
+.detail-value {
+    font-weight: bold;
+    color: var(--accent-glow);
+}
+
+.project-card-progress {
+    margin-top: 10px;
+}
+
+.progress-bar-container {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--terminal-green), var(--accent-glow));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+/* Sprint Interface Section */
+.sprint-interface {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+}
+
+#selected-project-details {
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    min-height: 120px;
+}
+
+.no-project-selected {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--terminal-text);
+    font-style: italic;
+}
+
+.selected-project-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.selected-project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selected-project-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+.selected-project-reward {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--terminal-green);
+}
+
+.selected-project-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+}
+
+.project-metric {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.metric-name {
+    font-size: 12px;
+    color: var(--terminal-text);
+    margin-bottom: 5px;
+}
+
+.metric-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--accent-glow);
+}
+
+.difficulty-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.star {
+    color: var(--accent-glow);
+}
+
+.star.empty {
+    opacity: 0.3;
+}
+
+.selected-project-description {
+    margin-top: 10px;
+    color: var(--terminal-text);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.selected-project-progress {
+    margin-top: 15px;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.progress-text {
+    font-size: 12px;
+    color: var(--terminal-text);
+}
+
+/* Agent and Timer Section */
+#sprint-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.agent-timer-section {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.agent-section {
+    flex: 1;
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    gap: 15px;
+}
+
+.agent-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.agent-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.agent-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.agent-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 10px;
+}
+
+.gpu-allocation {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gpu-meter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gpu-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--terminal-green);
+}
+
+.gpu-bar-container {
+    flex: 1;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.gpu-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--terminal-green), #4ade80);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.toggle-switch-large {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    height: 30px;
+}
+
+.toggle-switch-large input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider-large {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    width: 50px;
+    height: 24px;
+    background-color: #333;
+    border-radius: 34px;
+    transition: .4s;
+}
+
+.toggle-slider-large:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+}
+
+input:checked + .toggle-slider-large {
+    background-color: var(--terminal-green);
+}
+
+input:checked + .toggle-slider-large:before {
+    transform: translateX(26px);
+}
+
+.toggle-label {
+    margin-left: 60px;
+    line-height: 24px;
+    color: var(--terminal-text);
+}
+
+.success-bonus {
+    color: var(--terminal-green);
+    font-size: 12px;
+}
+
+.timer-section {
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.timer-circle-large {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin-bottom: 15px;
+}
+
+.timer-circle-large svg {
+    transform: rotate(-90deg);
+    overflow: visible;
+}
+
+.timer-circle-large svg circle {
+    transition: stroke-dashoffset 0.1s linear, stroke 0.5s ease;
+}
+
+.timer-circle-large svg circle:first-child {
+    stroke-opacity: 0.2;
+}
+
+.timer-circle-large svg circle:last-child {
+    stroke-dasharray: 427.25; /* 2πr where r=68 */
+    stroke-dashoffset: 0;
+}
+
+.timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--terminal-green);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.probability-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.probability-label {
+    font-size: 14px;
+    color: var(--terminal-text);
+}
+
+.probability-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--accent-glow);
+}
+
+.probability-value.low {
+    color: #ff3333;
+}
+
+.probability-value.medium {
+    color: #ffcc00;
+}
+
+.probability-value.high {
+    color: var(--terminal-green);
+}
+
+.sprint-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.action-button-large {
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #2c3e50, #4b6cb7);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-button-large:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.2), rgba(255,255,255,0));
+    transition: all 0.6s ease;
+}
+
+.action-button-large:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #4b6cb7, #2c3e50);
+}
+
+.action-button-large:hover:before {
+    left: 100%;
+}
+
+.yolo-btn {
+    background: linear-gradient(135deg, #ff6a00, #ee0979);
+    font-weight: bold;
+    animation: yoloPulse 1.5s infinite;
+}
+
+.yolo-btn:hover {
+    background: linear-gradient(135deg, #ee0979, #ff6a00);
+}
+
+/* Results Section */
+#sprint-result {
+    flex: 1;
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    align-items: center;
+}
+
+#sprint-result.success {
+    border: 2px solid var(--terminal-green);
+    background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(94, 234, 212, 0.05));
+}
+
+#sprint-result.failure {
+    border: 2px solid #ff3333;
+    background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(255, 51, 51, 0.05));
+}
+
+#result-message {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+#sprint-result.success #result-message {
+    color: var(--terminal-green);
+}
+
+#sprint-result.failure #result-message {
+    color: #ff3333;
+}
+
+#result-details {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--terminal-text);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#result-details ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 10px 0;
+    text-align: left;
+}
+
+#result-details li {
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+}
+
+#result-details li:before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent-glow);
+}
+
+/* Coding Results History */
+#coding-results {
+    max-height: 250px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.project-card, .selected-project-content {
+    animation: fadeInUp 0.3s ease forwards;
+}
+
+.project-card:nth-child(2) {
+    animation-delay: 0.05s;
+}
+
+.project-card:nth-child(3) {
+    animation-delay: 0.1s;
+}
+
+.project-card:nth-child(4) {
+    animation-delay: 0.15s;
+}
+
+@keyframes gpuPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(94, 234, 212, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(94, 234, 212, 0);
+    }
+}
+
+.gpu-bar.active {
+    animation: gpuPulse 2s infinite;
 }

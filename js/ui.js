@@ -310,7 +310,7 @@ export class UI {
                 } else if (panelName === 'coding' || panelName === 'coding-panel') {
                     console.log("Coding panel detected, updating project selection");
                     this.updateProjectSelection();
-                    this.updateAIModelSelection();
+                    this.initCodeSprintListeners();
                 }
             } else {
                 console.error("Panel not found: " + panelName);
@@ -392,208 +392,484 @@ export class UI {
     
     // Handle prompt submission
     handlePromptSubmission() {
-        console.log("Handling prompt submission");
+        // Redirect to the new Code Sprint UI
+        console.log("Redirecting to new Code Sprint UI");
         
-        var projectSelect = document.getElementById('project-select');
-        var aiModelSelect = document.getElementById('ai-model-select');
-        var promptTechniqueSelect = document.getElementById('prompt-technique-select');
-        var promptInput = document.getElementById('prompt-input');
-        var allocateGpuToggle = document.getElementById('allocate-gpu-toggle');
-        
-        if (!projectSelect || !aiModelSelect || !promptInput) {
-            this.showNotification("Missing UI elements for prompt submission", "error");
+        if (this.gameState.getAvailableTimeBlocks() <= 0) {
+            this.showNotification("Not enough time blocks left!", "error");
             return;
         }
         
-        if (!promptInput.value.trim()) {
-            this.showNotification("Please enter a prompt first", "warning");
-            return;
+        // Switch to the coding panel
+        this.switchPanel('coding-panel');
+        
+        // No need to deduct time blocks here - that'll happen when starting the sprint
+    }
+    
+    // Show the sprint interface
+    showSprintInterface() {
+        const promptInputWrapper = document.querySelector('.prompt-input-wrapper');
+        const sprintInfoContainer = document.getElementById('sprint-info-container');
+        
+        if (promptInputWrapper && sprintInfoContainer) {
+            promptInputWrapper.classList.add('hidden');
+            sprintInfoContainer.classList.remove('hidden');
+            
+            // Initialize event listeners for sprint buttons if they haven't been already
+            this.initSprintEventListeners();
+        }
+    }
+    
+    // Hide the sprint interface and show prompt input
+    hideSprintInterface() {
+        const promptInputWrapper = document.querySelector('.prompt-input-wrapper');
+        const sprintInfoContainer = document.getElementById('sprint-info-container');
+        
+        if (promptInputWrapper && sprintInfoContainer) {
+            promptInputWrapper.classList.remove('hidden');
+            sprintInfoContainer.classList.add('hidden');
+            
+            // Reset timer if it was running
+            this.stopSprintTimer();
+        }
+    }
+    
+    // Initialize event listeners for sprint buttons
+    initSprintEventListeners() {
+        const startSprintBtn = document.getElementById('start-sprint-btn');
+        const yoloBtn = document.getElementById('yolo-btn');
+        const continueBtn = document.getElementById('continue-btn');
+        
+        if (startSprintBtn && !startSprintBtn._initialized) {
+            startSprintBtn.addEventListener('click', () => this.startSprint());
+            startSprintBtn._initialized = true;
         }
         
-        // Check for GPU allocation request
-        var gpuAllocated = false;
-        if (allocateGpuToggle && allocateGpuToggle.checked && this.hardwareManager) {
-            // Attempt to allocate GPU
-            if (this.hardwareManager.isGPUAvailable()) {
-                gpuAllocated = this.hardwareManager.allocateGPU();
-                console.log("GPU allocation requested, result:", gpuAllocated);
-                
-                // Update GPU status in UI
-                this.updateStats();
-            } else {
-                this.showNotification("GPU is not available for allocation", "warning");
-            }
+        if (yoloBtn && !yoloBtn._initialized) {
+            yoloBtn.addEventListener('click', () => this.handleYolo());
+            yoloBtn._initialized = true;
         }
         
-        // Note: We don't deduct time blocks here since they're already deducted when entering the coding panel
-        console.log("Processing prompt without additional time block deduction. Current time blocks:", this.gameState.getAvailableTimeBlocks());
-        
-        // Get project and model selections
-        var projectIndex = parseInt(projectSelect.value);
-        var aiModelKey = aiModelSelect.value;
-        var promptTechniqueKey = promptTechniqueSelect ? promptTechniqueSelect.value : 'basic-instruction';
-        
-        // Check if we have a valid project manager and project selection
-        if (!this.projectManager || isNaN(projectIndex) || projectIndex < 0) {
-            // Fall back to simplified behavior
-            this.showNotification("Processing your prompt...", "info");
-            this.simulatePromptProcessing();
-            return;
-        }
-        
-        // Use the project manager to update project progress
-        console.log("Using project manager to update project progress", {
-            projectIndex,
-            aiModelKey,
-            promptTechniqueKey
-        });
-        
-        this.showNotification("Processing your prompt...", "info");
-        
-        var self = this;
-        setTimeout(function() {
-            // Try to use projectManager for actual logic
-            try {
-                var result = self.projectManager.updateProjectProgress(
-                    projectIndex, 
-                    aiModelKey, 
-                    promptTechniqueKey,
-                    self.hardwareManager
-                );
+        if (continueBtn && !continueBtn._initialized) {
+            continueBtn.addEventListener('click', () => {
+                // Hide result and return to prompt input
+                document.getElementById('sprint-result').classList.add('hidden');
+                this.hideSprintInterface();
                 
-                console.log("Project progress update result:", result);
-                
-                if (result.success) {
-                    if (result.completed) {
-                        self.showNotification(`Project completed! You earned $${result.reward}`, "success");
-                    } else if (result.isSprintSuccess) {
-                        self.showNotification(`Success! Made ${result.progressGained}% progress on the project.${result.gpuUsed ? ' (GPU boost applied)' : ''}`, "success");
-                    } else {
-                        self.showNotification(result.message || "Partial success or failure in the coding sprint.", "warning");
-                    }
-                    
-                    // Add to coding results
-                    self.addCodingResult(result, promptInput.value);
-                    
-                    // Update UI
-                    self.updateStats();
-                    self.updateCurrentProjectInfo();
-                    self.updateCompletedProjectsList();
-                    self.updateActiveProjectsList();
-                } else {
-                    self.showNotification(result.message || "Error updating project progress", "error");
+                // Clear the prompt input field
+                const promptInput = document.getElementById('prompt-input');
+                if (promptInput) {
+                    promptInput.value = '';
                 }
-            } catch (error) {
-                console.error("Error in project progress update:", error);
-                self.showNotification("An error occurred during the coding sprint.", "error");
-                self.simulatePromptProcessing(); // Fall back to simplified behavior
-            }
-            
-            // Clear the prompt input field
-            promptInput.value = '';
-        }, 1500);
+            });
+            continueBtn._initialized = true;
+        }
     }
     
-    // Simplified fallback for prompt processing
-    simulatePromptProcessing() {
-        var codingResults = document.getElementById('coding-results');
-        if (codingResults) {
-            var result = document.createElement('div');
-            result.className = 'coding-result success';
-            result.innerHTML = '<div class="result-header"><div class="result-status success">SUCCESS</div><div class="result-timestamp">' + 
-                new Date().toLocaleTimeString() + '</div></div>' +
-                '<div class="result-message">Your code was generated successfully.</div>' +
-                '<div class="code-container"><pre><code>// Generated code example\nfunction example() {\n  console.log("Success!");\n}</code></pre></div>';
+    // Update sprint info display with calculated probability
+    updateSprintInfo(probabilityResult, promptText) {
+        // Cache elements
+        const sprintReward = document.getElementById('sprint-reward');
+        const sprintDifficulty = document.getElementById('sprint-difficulty');
+        const sprintGpuReq = document.getElementById('sprint-gpu-req');
+        const sprintSuccessProb = document.getElementById('sprint-success-prob');
+        
+        // Store data for use in timer completion
+        this._currentSprintData = {
+            projectIndex: document.getElementById('project-select').value,
+            aiModelKey: document.getElementById('ai-model-select').value,
+            promptKey: document.getElementById('prompt-technique-select').value,
+            gpuAllocated: document.getElementById('allocate-gpu-toggle').checked,
+            promptText: promptText,
+            probability: probabilityResult.probability
+        };
+        
+        // Update displayed values
+        if (sprintReward && probabilityResult.project) {
+            sprintReward.textContent = '$' + probabilityResult.project.reward;
+        }
+        
+        if (sprintDifficulty && probabilityResult.project) {
+            // Format difficulty as text
+            let difficultyText = 'Easy';
+            if (probabilityResult.project.difficulty >= 2.5) {
+                difficultyText = 'Very Hard';
+            } else if (probabilityResult.project.difficulty >= 2) {
+                difficultyText = 'Hard';
+            } else if (probabilityResult.project.difficulty >= 1.5) {
+                difficultyText = 'Medium';
+            }
+            sprintDifficulty.textContent = difficultyText;
+        }
+        
+        if (sprintGpuReq) {
+            sprintGpuReq.textContent = '1'; // All projects require 1 GPU for now
+        }
+        
+        if (sprintSuccessProb) {
+            // Format as percentage
+            const probabilityPercentage = Math.round(probabilityResult.probability * 100);
+            sprintSuccessProb.textContent = probabilityPercentage + '%';
             
-            if (codingResults.firstChild) {
-                codingResults.insertBefore(result, codingResults.firstChild);
+            // Add color class based on probability
+            sprintSuccessProb.className = 'detail-value';
+            if (probabilityPercentage < 40) {
+                sprintSuccessProb.classList.add('low');
+            } else if (probabilityPercentage < 70) {
+                sprintSuccessProb.classList.add('medium');
             } else {
-                codingResults.appendChild(result);
+                sprintSuccessProb.classList.add('high');
             }
         }
     }
     
-    // Add coding result to the coding panel
-    addCodingResult(result, promptText) {
-        var codingResults = document.getElementById('coding-results');
-        if (!codingResults) return;
-        
-        var resultCard = document.createElement('div');
-        resultCard.className = 'coding-result ' + (result.isSprintSuccess ? 'success' : 'partial-success');
-        
-        var statusText = result.isSprintSuccess ? 'SUCCESS' : (result.progressGained > 0 ? 'PARTIAL SUCCESS' : 'FAILURE');
-        var statusClass = result.isSprintSuccess ? 'success' : (result.progressGained > 0 ? 'partial-success' : 'failure');
-        
-        var gpuInfo = result.gpuUsed ? `<div class="detail-item">
-            <div class="detail-label">GPU Used:</div>
-            <div class="detail-value">Yes (+${result.gpuBonus.toFixed(0)}% success)</div>
-        </div>` : '';
-        
-        resultCard.innerHTML = `
-            <div class="result-header">
-                <div class="result-status ${statusClass}">${statusText}</div>
-                <div class="result-timestamp">${new Date().toLocaleTimeString()}</div>
-            </div>
-            <div class="result-message">
-                ${result.isSprintSuccess ? 
-                    `Great work! Your code sprint was successful.` : 
-                    (result.message || 'Your code sprint had mixed results.')}
-            </div>
-            <div class="result-details">
-                <div class="detail-item">
-                    <div class="detail-label">Progress:</div>
-                    <div class="detail-value">+${result.progressGained}%</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Success Rate:</div>
-                    <div class="detail-value">${Math.round(result.successRate * 100)}%</div>
-                </div>
-                ${gpuInfo}
-                <div class="detail-item">
-                    <div class="detail-label">Skills Gained:</div>
-                    <div class="detail-value">
-                        Coding: +${result.skillGain.coding.toFixed(1)}, 
-                        Prompt: +${result.skillGain.prompt.toFixed(1)}
-                    </div>
-                </div>
-            </div>
-            <div class="prompt-container">
-                <div class="prompt-header">Your Prompt:</div>
-                <div class="prompt-text">${promptText}</div>
-            </div>
-        `;
-        
-        if (codingResults.firstChild) {
-            codingResults.insertBefore(resultCard, codingResults.firstChild);
-        } else {
-            codingResults.appendChild(resultCard);
+    // Start the sprint timer
+    startSprint() {
+        try {
+            if (!this._currentSprintData) {
+                this.showNotification("Sprint data not available", "error");
+                return;
+            }
+            
+            // Check if we have enough time blocks
+            if (this.gameState.getAvailableTimeBlocks() < 1) {
+                this.showNotification("Not enough time blocks to start a sprint", "error");
+                return;
+            }
+            
+            // Deduct 1 time block for the sprint
+            if (!this.gameState.useTimeBlock(1)) {
+                this.showNotification("Could not use time block", "error");
+                return;
+            }
+            
+            // Update stats to reflect used time block
+            this.updateStats();
+            
+            // Try to allocate GPU if requested
+            if (this._currentSprintData.gpuAllocated && this.hardwareManager) {
+                this.hardwareManager.allocateGPU();
+                
+                // Update the GPU usage bar
+                const gpuBar = document.getElementById('gpu-usage-bar');
+                if (gpuBar) {
+                    gpuBar.style.width = '100%';
+                    gpuBar.classList.add('active');
+                }
+            }
+            
+            // Hide start button, show YOLO button
+            const startSprintBtn = document.getElementById('start-sprint-btn');
+            const yoloBtn = document.getElementById('yolo-btn');
+            
+            if (startSprintBtn) {
+                startSprintBtn.classList.add('hidden');
+            }
+            
+            if (yoloBtn) {
+                yoloBtn.classList.remove('hidden');
+            }
+            
+            // Initialize timer variables - use 30 seconds for testing, 120 for production
+            this._timerDuration = 120; // 2 minutes in seconds
+            this._timerRemaining = this._timerDuration;
+            this._timerActive = true;
+            
+            // Start the countdown
+            this.updateTimerDisplay();
+            this._timerInterval = setInterval(() => this.updateTimer(), 1000);
+            
+            // Show notification
+            this.showNotification("Code Sprint started! Timer running...", "info");
+        } catch (error) {
+            console.error("Error starting sprint:", error);
+            this.showNotification("Error starting sprint", "error");
         }
     }
     
-    // Show notification
-    showNotification(message, type, duration) {
-        if (!type) type = 'info';
-        if (!duration) duration = 5000;
-        
-        console.log("Showing notification: " + message);
-        
-        var notification = document.createElement('div');
-        notification.className = "notification " + type;
-        notification.textContent = message;
-        
-        var container = document.getElementById('notification-container');
-        if (container) {
-            container.appendChild(notification);
+    // Update the timer display and progress
+    updateTimer() {
+        try {
+            if (!this._timerActive) return;
             
-            var self = this;
-            setTimeout(function() {
-                notification.classList.add('hiding');
-                setTimeout(function() {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
+            this._timerRemaining--;
+            
+            // Update the display
+            this.updateTimerDisplay();
+            
+            // Check if timer is complete
+            if (this._timerRemaining <= 0) {
+                this.completeSprintTimer();
+            }
+        } catch (error) {
+            console.error("Error updating timer:", error);
+            
+            // Safety: stop the timer if an error occurs
+            this.stopSprintTimer();
+        }
+    }
+    
+    // Update the visual timer display
+    updateTimerDisplay() {
+        try {
+            const timerText = document.getElementById('timer-text');
+            const timerCircle = document.getElementById('timer-circle');
+            
+            if (timerText) {
+                // Format as MM:SS
+                const minutes = Math.floor(this._timerRemaining / 60);
+                const seconds = this._timerRemaining % 60;
+                timerText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            if (timerCircle) {
+                // Calculate the stroke dash offset based on remaining time
+                const circumference = 2 * Math.PI * 68; // 2πr where r=68
+                
+                // Ensure _timerDuration is not zero to avoid division by zero
+                const duration = this._timerDuration || 120;
+                
+                // Calculate dashOffset with safety checks
+                let dashOffset = 0;
+                if (this._timerRemaining <= duration) {
+                    dashOffset = circumference * (1 - this._timerRemaining / duration);
+                }
+                
+                timerCircle.style.strokeDasharray = circumference;
+                timerCircle.style.strokeDashoffset = dashOffset;
+                
+                // Change color based on remaining time
+                if (this._timerRemaining < duration * 0.25) {
+                    timerCircle.style.stroke = '#ff3333'; // Red for last 25%
+                } else if (this._timerRemaining < duration * 0.5) {
+                    timerCircle.style.stroke = '#ffcc00'; // Yellow for 25-50%
+                } else {
+                    timerCircle.style.stroke = '#5eead4'; // Default teal
+                }
+            }
+        } catch (error) {
+            console.error("Error updating timer display:", error);
+        }
+    }
+    
+    // Stop the sprint timer
+    stopSprintTimer() {
+        try {
+            if (this._timerInterval) {
+                clearInterval(this._timerInterval);
+                this._timerInterval = null;
+            }
+            
+            this._timerActive = false;
+            
+            // Reset UI elements
+            const startSprintBtn = document.getElementById('start-sprint-btn');
+            const yoloBtn = document.getElementById('yolo-btn');
+            
+            if (startSprintBtn) {
+                startSprintBtn.classList.remove('hidden');
+            }
+            
+            if (yoloBtn) {
+                yoloBtn.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error("Error stopping sprint timer:", error);
+        }
+    }
+    
+    // Complete the sprint timer and process results
+    completeSprintTimer() {
+        try {
+            // Stop the timer
+            this.stopSprintTimer();
+            
+            if (!this._currentSprintData) {
+                this.showNotification("Sprint data not available", "error");
+                return;
+            }
+            
+            // Show timer completion notification
+            this.showNotification("Sprint completed!", "info");
+            
+            // Execute the sprint with the project manager
+            if (this.projectManager && this.hardwareManager) {
+                console.log("Executing sprint with timer data:", this._currentSprintData);
+                
+                try {
+                    const result = this.projectManager.executeSprintWithTimer(
+                        this._currentSprintData.projectIndex,
+                        this._currentSprintData.aiModelKey,
+                        this._currentSprintData.promptKey,
+                        this.hardwareManager,
+                        "Code Sprint completed" // Simplified prompt text
+                    );
+                    
+                    console.log("Sprint result:", result);
+                    
+                    // Display results
+                    this.showSprintResult(result);
+                    
+                    // Also add to coding results history
+                    this.addCodingResult(result, "Code Sprint completed");
+                    
+                    // Update UI components
+                    this.updateStats();
+                    
+                    // Update project cards and selection to reflect new progress
+                    this.updateProjectSelection();
+                    
+                    // Reselect the current project
+                    if (typeof this._selectedProjectIndex !== 'undefined') {
+                        // Make sure the project still exists (it might have been completed and removed)
+                        if (this.gameState.activeProjects && 
+                            this._selectedProjectIndex < this.gameState.activeProjects.length) {
+                            this.selectProject(this._selectedProjectIndex);
+                        } else if (this.gameState.activeProjects && this.gameState.activeProjects.length > 0) {
+                            // Select the first project if the previous one is gone
+                            this.selectProject(0);
+                        }
                     }
-                }, 300);
-            }, duration);
+                } catch (error) {
+                    console.error("Error executing sprint with timer:", error);
+                    this.showNotification("Error processing sprint results", "error");
+                }
+                
+                // Release GPU if it was allocated
+                if (this._currentSprintData.gpuAllocated) {
+                    this.hardwareManager.releaseGPU();
+                    
+                    // Update GPU bar
+                    const gpuBar = document.getElementById('gpu-usage-bar');
+                    if (gpuBar) {
+                        gpuBar.style.width = '0%';
+                        gpuBar.classList.remove('active');
+                    }
+                    
+                    this.updateStats();
+                }
+            } else {
+                this.showNotification("Project manager or hardware manager not available", "error");
+            }
+        } catch (error) {
+            console.error("Error completing sprint timer:", error);
+            this.showNotification("Error completing sprint", "error");
+            
+            // Hide the timer container
+            document.getElementById('sprint-timer-container')?.classList.add('hidden');
+            
+            // Show a basic result
+            const sprintResult = document.getElementById('sprint-result');
+            if (sprintResult) {
+                sprintResult.classList.remove('hidden');
+                sprintResult.innerHTML = `
+                    <div id="result-message" style="color: #ff3333;">Error Processing Sprint</div>
+                    <div id="result-details">There was an error processing your sprint results. Please try again.</div>
+                    <button id="continue-btn" class="action-button-large">Continue</button>
+                `;
+                
+                // Add event listener to the continue button
+                const continueBtn = document.getElementById('continue-btn');
+                if (continueBtn) {
+                    continueBtn.addEventListener('click', () => {
+                        sprintResult.classList.add('hidden');
+                        this.showSprintWorkspace();
+                    });
+                }
+            }
+        }
+    }
+    
+    // Show the sprint result
+    showSprintResult(result) {
+        try {
+            const sprintResult = document.getElementById('sprint-result');
+            const resultMessage = document.getElementById('result-message');
+            const resultDetails = document.getElementById('result-details');
+            
+            if (!sprintResult || !resultMessage || !resultDetails) {
+                console.error("Sprint result elements not found");
+                return;
+            }
+            
+            // Hide sprint workspace
+            const sprintWorkspace = document.getElementById('sprint-workspace');
+            if (sprintWorkspace) {
+                sprintWorkspace.classList.add('hidden');
+            } else {
+                console.error("Sprint workspace element not found");
+            }
+            
+            // Show result container
+            sprintResult.classList.remove('hidden');
+            
+            // Set result class based on success/failure
+            sprintResult.className = 'sprint-result';
+            if (result.isSprintSuccess) {
+                sprintResult.classList.add('success');
+            } else {
+                sprintResult.classList.add('failure');
+            }
+            
+            // Set message
+            if (result.isSprintSuccess) {
+                resultMessage.textContent = `Success! 🎉 +${result.progressGained}% Progress`;
+            } else if (result.completed) {
+                resultMessage.textContent = `Project Completed! 🚀 +$${result.reward}`;
+            } else {
+                resultMessage.textContent = result.message || 'Sprint Failed 😕';
+            }
+            
+            // Set details
+            let detailsHTML = '';
+            
+            // Add progress made
+            if (result.progressGained > 0) {
+                detailsHTML += `<div>Made <strong>${result.progressGained}%</strong> progress on the project.</div>`;
+            }
+            
+            // Add skill gains
+            if (result.skillGain) {
+                detailsHTML += '<div style="margin-top:10px;">Skills gained:</div>';
+                detailsHTML += '<ul>';
+                if (result.skillGain.coding > 0) {
+                    detailsHTML += `<li>Coding: <strong>+${result.skillGain.coding.toFixed(2)}</strong></li>`;
+                }
+                if (result.skillGain.prompt > 0) {
+                    detailsHTML += `<li>Prompt Engineering: <strong>+${result.skillGain.prompt.toFixed(2)}</strong></li>`;
+                }
+                detailsHTML += '</ul>';
+            }
+            
+            // Add GPU usage info
+            if (result.gpuUsed) {
+                detailsHTML += `<div style="margin-top:10px;">GPU boost applied: <strong>+${result.gpuBonus}%</strong> success probability</div>`;
+            }
+            
+            // Add reward if completed
+            if (result.completed) {
+                detailsHTML += `<div style="margin-top:15px;font-size:18px;">Reward: <strong>$${result.reward}</strong> added to your account!</div>`;
+            }
+            
+            resultDetails.innerHTML = detailsHTML;
+            
+            // Ensure the continue button has an event listener
+            const continueBtn = document.getElementById('continue-btn');
+            if (continueBtn) {
+                // Remove any existing listeners
+                const newBtn = continueBtn.cloneNode(true);
+                continueBtn.parentNode.replaceChild(newBtn, continueBtn);
+                
+                // Add new listener
+                newBtn.addEventListener('click', () => {
+                    sprintResult.classList.add('hidden');
+                    this.showSprintWorkspace();
+                });
+            } else {
+                console.error("Continue button not found");
+            }
+        } catch (error) {
+            console.error("Error showing sprint result:", error);
         }
     }
     
@@ -602,10 +878,18 @@ export class UI {
         console.log("Initializing panels");
         this.setupMainMenu();
         this.updateCompletedProjectsList();
-        this.updateProjectSelection();
+        
+        // Don't call updateProjectSelection here, it will be called when the coding panel is opened
+        
         this.updateEmailList();
         this.updateActiveProjectsList();
         this.initSocialPanel();
+        
+        // Initialize GPU meter to 0%
+        const gpuBar = document.getElementById('gpu-usage-bar');
+        if (gpuBar) {
+            gpuBar.style.width = '0%';
+        }
     }
     
     // Update the completed projects list
@@ -705,167 +989,147 @@ export class UI {
         // Main menu button handlers
         var codeBtn = document.getElementById('code-btn');
         if (codeBtn) {
-            // Remove previous event listeners to prevent duplicates
-            codeBtn.replaceWith(codeBtn.cloneNode(true));
-            codeBtn = document.getElementById('code-btn');
-            
-            codeBtn.addEventListener('click', function() {
-                console.log("Code Sprint button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                    console.log("Time block deducted for Code Sprint - remaining:", self.gameState.getAvailableTimeBlocks());
-                    
-                    // Immediately update the time blocks counter in the UI
-                    if (self.timeBlocks) {
-                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
-                    }
-                    
-                    self.switchPanel('coding-panel');
-                    self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
-                    self.updateStats();
-                    
-                    // Force a redraw for browsers that might batch updates
-                    setTimeout(() => {
-                        // Update again after a small delay to ensure UI is refreshed
+            // Only set up event listener if it doesn't already have one
+            if (!codeBtn._initialized) {
+                codeBtn.addEventListener('click', function() {
+                    console.log("Code Sprint button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                        console.log("Time block deducted for Code Sprint - remaining:", self.gameState.getAvailableTimeBlocks());
+                        
+                        // Immediately update the time blocks counter in the UI
                         if (self.timeBlocks) {
                             self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
                         }
-                    }, 50);
-                    
-                    // Check if all time blocks are used
-                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                        
+                        self.switchPanel('coding-panel');
+                        self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
+                        self.updateStats();
+                        
+                        // Force a redraw for browsers that might batch updates
+                        setTimeout(() => {
+                            // Update again after a small delay to ensure UI is refreshed
+                            if (self.timeBlocks) {
+                                self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                            }
+                        }, 50);
+                        
+                        // Check if all time blocks are used
+                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                        }
+                    } else {
+                        self.showNotification("Not enough time blocks left!", "error");
                     }
-                } else {
-                    self.showNotification("Not enough time blocks left!", "error");
-                }
-            });
+                });
+                codeBtn._initialized = true;
+                console.log("Code Sprint button event listener initialized");
+            } else {
+                console.log("Code Sprint button already has event listener");
+            }
         }
         
         var emailBtn = document.getElementById('email-btn');
         if (emailBtn) {
-            // Remove previous event listeners to prevent duplicates
-            emailBtn.replaceWith(emailBtn.cloneNode(true));
-            emailBtn = document.getElementById('email-btn');
-            
-            emailBtn.addEventListener('click', function() {
-                console.log("Email button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                    console.log("Time block deducted for Email - remaining:", self.gameState.getAvailableTimeBlocks());
-                    
-                    // Immediately update the time blocks counter in the UI
-                    if (self.timeBlocks) {
-                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
-                    }
-                    
-                    self.switchPanel('email-panel');
-                    self.updateEmailList();
-                    self.showNotification("Checking email! (Used 1 Time Block)", "info");
-                    self.updateStats();
-                    
-                    // Force a redraw for browsers that might batch updates
-                    setTimeout(() => {
-                        // Update again after a small delay to ensure UI is refreshed
-                        if (self.timeBlocks) {
-                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+            // Only set up event listener if it doesn't already have one
+            if (!emailBtn._initialized) {
+                emailBtn.addEventListener('click', function() {
+                    console.log("Email button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                        console.log("Time block deducted for Email - remaining:", self.gameState.getAvailableTimeBlocks());
+                        self.switchPanel('email-panel');
+                        self.updateEmailList();
+                        self.showNotification("Checking email! (Used 1 Time Block)", "info");
+                        self.updateStats();
+                        
+                        // Check if all time blocks are used
+                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
                         }
-                    }, 50);
-                    
-                    // Check if all time blocks are used
-                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                    } else {
+                        self.showNotification("Not enough time blocks left!", "error");
                     }
-                } else {
-                    self.showNotification("Not enough time blocks left!", "error");
-                }
-            });
+                });
+                emailBtn._initialized = true;
+                console.log("Email button event listener initialized");
+            } else {
+                console.log("Email button already has event listener");
+            }
         }
         
         var socialBtn = document.getElementById('social-btn');
         if (socialBtn) {
-            // Remove previous event listeners to prevent duplicates
-            socialBtn.replaceWith(socialBtn.cloneNode(true));
-            socialBtn = document.getElementById('social-btn');
-            
-            socialBtn.addEventListener('click', function() {
-                console.log("Social button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                    console.log("Time block deducted for Social - remaining:", self.gameState.getAvailableTimeBlocks());
-                    
-                    // Immediately update the time blocks counter in the UI
-                    if (self.timeBlocks) {
-                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
-                    }
-                    
-                    self.switchPanel('social-panel');
-                    self.initSocialPanel();
-                    self.showNotification("Scrolling social media! (Used 1 Time Block)", "info");
-                    self.updateStats();
-                    
-                    // Force a redraw for browsers that might batch updates
-                    setTimeout(() => {
-                        // Update again after a small delay to ensure UI is refreshed
-                        if (self.timeBlocks) {
-                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+            // Only set up event listener if it doesn't already have one
+            if (!socialBtn._initialized) {
+                socialBtn.addEventListener('click', function() {
+                    console.log("Social button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                        console.log("Time block deducted for Social - remaining:", self.gameState.getAvailableTimeBlocks());
+                        self.switchPanel('social-panel');
+                        self.initSocialPanel();
+                        self.showNotification("Scrolling social media! (Used 1 Time Block)", "info");
+                        self.updateStats();
+                        
+                        // Check if all time blocks are used
+                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
                         }
-                    }, 50);
-                    
-                    // Check if all time blocks are used
-                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                    } else {
+                        self.showNotification("Not enough time blocks left!", "error");
                     }
-                } else {
-                    self.showNotification("Not enough time blocks left!", "error");
-                }
-            });
+                });
+                socialBtn._initialized = true;
+                console.log("Social button event listener initialized");
+            } else {
+                console.log("Social button already has event listener");
+            }
         }
         
         var shopBtn = document.getElementById('shop-btn');
         if (shopBtn) {
-            // Remove previous event listeners to prevent duplicates
-            shopBtn.replaceWith(shopBtn.cloneNode(true));
-            shopBtn = document.getElementById('shop-btn');
-            
-            shopBtn.addEventListener('click', function() {
-                console.log("Shop button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                    console.log("Time block deducted for Shop - remaining:", self.gameState.getAvailableTimeBlocks());
-                    
-                    // Immediately update the time blocks counter in the UI
-                    if (self.timeBlocks) {
-                        self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
-                    }
-                    
-                    self.switchPanel('shop-panel');
-                    self.showNotification("Browsing the shop! (Used 1 Time Block)", "info");
-                    self.updateStats();
-                    
-                    // Force a redraw for browsers that might batch updates
-                    setTimeout(() => {
-                        // Update again after a small delay to ensure UI is refreshed
-                        if (self.timeBlocks) {
-                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+            // Only set up event listener if it doesn't already have one
+            if (!shopBtn._initialized) {
+                shopBtn.addEventListener('click', function() {
+                    console.log("Shop button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                        console.log("Time block deducted for Shop - remaining:", self.gameState.getAvailableTimeBlocks());
+                        self.switchPanel('shop-panel');
+                        self.showNotification("Shopping for tech! (Used 1 Time Block)", "info");
+                        self.updateStats();
+                        
+                        // Check if all time blocks are used
+                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
                         }
-                    }, 50);
-                    
-                    // Check if all time blocks are used
-                    if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                        self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                    } else {
+                        self.showNotification("Not enough time blocks left!", "error");
                     }
-                } else {
-                    self.showNotification("Not enough time blocks left!", "error");
-                }
-            });
+                });
+                shopBtn._initialized = true;
+                console.log("Shop button event listener initialized");
+            } else {
+                console.log("Shop button already has event listener");
+            }
         }
         
         var resourcesBtn = document.getElementById('resources-btn');
         if (resourcesBtn) {
-            // Remove previous event listeners to prevent duplicates
-            resourcesBtn.replaceWith(resourcesBtn.cloneNode(true));
-            resourcesBtn = document.getElementById('resources-btn');
-            
-            resourcesBtn.addEventListener('click', function() {
-                self.switchPanel('resources-panel');
-            });
+            // Only set up event listener if it doesn't already have one
+            if (!resourcesBtn._initialized) {
+                resourcesBtn.addEventListener('click', function() {
+                    console.log("Resources button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+                    // Resources panel doesn't consume time blocks
+                    self.switchPanel('resources-panel');
+                    
+                    // Update resources display if resource manager exists
+                    if (self.resourceManager && typeof self.resourceManager.updateResourcesDisplay === 'function') {
+                        self.resourceManager.updateResourcesDisplay();
+                    }
+                });
+                resourcesBtn._initialized = true;
+                console.log("Resources button event listener initialized");
+            } else {
+                console.log("Resources button already has event listener");
+            }
         }
     }
     
@@ -1047,56 +1311,125 @@ export class UI {
         this.gameState.saveState();
     }
     
-    // Update project selection dropdown
+    // Update project selection
     updateProjectSelection() {
         console.log("Updating project selection");
         
-        var projectSelect = document.getElementById('project-select');
-        if (!projectSelect) {
-            console.error("Project select element not found");
-            return;
-        }
-        
-        // Clear current options
-        projectSelect.innerHTML = '';
-        
-        // Mock data for now
-        if (!this.gameState.activeProjects || this.gameState.activeProjects.length === 0) {
-            // Create a mock project if none exist
-            if (this.projectManager) {
-                this.projectManager.addProject({
-                    name: "Tutorial Project",
-                    difficulty: 1,
-                    reward: 100,
-                    type: 'tutorial',
-                    progress: 0,
-                    completed: false
+        try {
+            // Get the project cards container
+            const projectCardsGrid = document.getElementById('project-cards-grid');
+            if (!projectCardsGrid) {
+                console.error("Project cards grid element not found, attempting to create it");
+                
+                // Try to find the container and create the grid if it doesn't exist
+                const container = document.querySelector('.project-cards-container');
+                if (container) {
+                    const grid = document.createElement('div');
+                    grid.id = 'project-cards-grid';
+                    container.appendChild(grid);
+                    console.log("Created project-cards-grid element");
+                } else {
+                    console.error("Cannot create project-cards-grid, container not found");
+                    return;
+                }
+            }
+            
+            // Get the grid again in case we just created it
+            const grid = document.getElementById('project-cards-grid');
+            
+            // Clear existing cards
+            if (grid) {
+                grid.innerHTML = '';
+            } else {
+                console.error("Failed to get project-cards-grid even after attempted creation");
+                return;
+            }
+            
+            // Ensure we have game state and active projects
+            if (!this.gameState) {
+                console.error("Game state not available");
+                return;
+            }
+            
+            if (!this.gameState.activeProjects) {
+                console.log("No active projects array in game state, initializing");
+                this.gameState.activeProjects = [];
+            }
+            
+            // Create a card for each active project
+            if (this.gameState.activeProjects.length > 0) {
+                console.log(`Creating cards for ${this.gameState.activeProjects.length} active projects`);
+                this.gameState.activeProjects.forEach((project, index) => {
+                    // Create project card element
+                    try {
+                        const projectCard = this.createProjectCard(project, index);
+                        grid.appendChild(projectCard);
+                    } catch (err) {
+                        console.error(`Error creating card for project ${index}:`, err);
+                    }
                 });
             } else {
-                // If no projectManager, create local mock data
-                this.gameState.activeProjects = [{
-                    name: "Demo Project",
-                    difficulty: 1,
-                    reward: 100,
-                    type: 'demo',
-                    progress: 0,
-                    completed: false
-                }];
+                // Display message if no projects available
+                console.log("No active projects found, showing empty state");
+                const noProjectsMsg = document.createElement('div');
+                noProjectsMsg.className = 'no-projects-message';
+                noProjectsMsg.innerHTML = `
+                    <p>No active projects found.</p>
+                    <p>Check your email or social media for opportunities.</p>
+                `;
+                grid.appendChild(noProjectsMsg);
+                
+                // Add a demo project for testing if this is development environment
+                if (this.gameState.day === 1) {
+                    console.log("Adding demo project for day 1");
+                    if (this.projectManager) {
+                        // Add a tutorial project if none exists
+                        let hasTutorial = false;
+                        
+                        // Check if tutorial already exists
+                        if (this.gameState.activeProjects) {
+                            hasTutorial = this.gameState.activeProjects.some(p => p.name === "Tutorial Project");
+                        }
+                        
+                        if (!hasTutorial) {
+                            const tutorialProject = {
+                                name: "Tutorial Project",
+                                type: "tutorial",
+                                typeName: "Tutorial",
+                                description: "A simple project to get you started with Code Sprints.",
+                                difficulty: 1,
+                                reward: 100,
+                                requiredProgress: 100,
+                                progress: 0,
+                                completed: false,
+                                workedOnToday: false,
+                                daysTaken: 0,
+                                sprints: []
+                            };
+                            
+                            if (this.gameState.activeProjects) {
+                                this.gameState.activeProjects.push(tutorialProject);
+                                
+                                // After adding the project, update the cards
+                                try {
+                                    const projectCard = this.createProjectCard(tutorialProject, this.gameState.activeProjects.length - 1);
+                                    grid.appendChild(projectCard);
+                                } catch (err) {
+                                    console.error("Error creating card for tutorial project:", err);
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        }
-        
-        // Add each active project to the dropdown
-        var self = this;
-        if (this.gameState.activeProjects) {
-            this.gameState.activeProjects.forEach(function(project, index) {
-                var option = document.createElement('option');
-                option.value = index;
-                option.textContent = project.name;
-                projectSelect.appendChild(option);
-            });
             
-            // Trigger change to update current project info
-            this.updateCurrentProjectInfo();
+            // Initialize default project selection if we have projects
+            if (this.gameState.activeProjects && this.gameState.activeProjects.length > 0) {
+                this.selectProject(0);
+            }
+            
+        } catch (error) {
+            console.error("Error in updateProjectSelection:", error);
         }
     }
     
@@ -2010,6 +2343,499 @@ export class UI {
             this.hardwareManager.releaseGPU();
             this.updateStats();
             this.showNotification("GPU resources released", "info");
+        }
+    }
+    
+    // Show notification
+    showNotification(message, type, duration) {
+        if (!type) type = 'info';
+        if (!duration) duration = 5000;
+        
+        console.log("Showing notification: " + message);
+        
+        var notification = document.createElement('div');
+        notification.className = "notification " + type;
+        notification.textContent = message;
+        
+        var container = document.getElementById('notification-container');
+        if (container) {
+            container.appendChild(notification);
+            
+            var self = this;
+            setTimeout(function() {
+                notification.classList.add('hiding');
+                setTimeout(function() {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, duration);
+        }
+    }
+    
+    // Add coding result to the coding panel
+    addCodingResult(result, promptText) {
+        var codingResults = document.getElementById('coding-results');
+        if (!codingResults) return;
+        
+        var resultCard = document.createElement('div');
+        resultCard.className = 'coding-result ' + (result.isSprintSuccess ? 'success' : 'partial-success');
+        
+        var statusText = result.isSprintSuccess ? 'SUCCESS' : (result.progressGained > 0 ? 'PARTIAL SUCCESS' : 'FAILURE');
+        var statusClass = result.isSprintSuccess ? 'success' : (result.progressGained > 0 ? 'partial-success' : 'failure');
+        
+        var gpuInfo = result.gpuUsed ? `<div class="detail-item">
+            <div class="detail-label">GPU Used:</div>
+            <div class="detail-value">Yes (+${result.gpuBonus.toFixed(0)}% success)</div>
+        </div>` : '';
+        
+        resultCard.innerHTML = `
+            <div class="result-header">
+                <div class="result-status ${statusClass}">${statusText}</div>
+                <div class="result-timestamp">${new Date().toLocaleTimeString()}</div>
+            </div>
+            <div class="result-message">
+                ${result.isSprintSuccess ? 
+                    `Great work! Your code sprint was successful.` : 
+                    (result.message || 'Your code sprint had mixed results.')}
+            </div>
+            <div class="result-details">
+                <div class="detail-item">
+                    <div class="detail-label">Progress:</div>
+                    <div class="detail-value">+${result.progressGained}%</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Success Rate:</div>
+                    <div class="detail-value">${Math.round(result.successRate * 100)}%</div>
+                </div>
+                ${gpuInfo}
+                <div class="detail-item">
+                    <div class="detail-label">Skills Gained:</div>
+                    <div class="detail-value">
+                        Coding: +${result.skillGain.coding.toFixed(1)}, 
+                        Prompt: +${result.skillGain.prompt.toFixed(1)}
+                    </div>
+                </div>
+            </div>
+            <div class="prompt-container">
+                <div class="prompt-header">Your Prompt:</div>
+                <div class="prompt-text">${promptText}</div>
+            </div>
+        `;
+        
+        if (codingResults.firstChild) {
+            codingResults.insertBefore(resultCard, codingResults.firstChild);
+        } else {
+            codingResults.appendChild(resultCard);
+        }
+    }
+
+    // Simplified fallback for prompt processing
+    simulatePromptProcessing() {
+        var codingResults = document.getElementById('coding-results');
+        if (codingResults) {
+            var result = document.createElement('div');
+            result.className = 'coding-result success';
+            result.innerHTML = '<div class="result-header"><div class="result-status success">SUCCESS</div><div class="result-timestamp">' + 
+                new Date().toLocaleTimeString() + '</div></div>' +
+                '<div class="result-message">Your code was generated successfully.</div>' +
+                '<div class="code-container"><pre><code>// Generated code example\nfunction example() {\n  console.log("Success!");\n}</code></pre></div>';
+            
+            if (codingResults.firstChild) {
+                codingResults.insertBefore(result, codingResults.firstChild);
+            } else {
+                codingResults.appendChild(result);
+            }
+        }
+    }
+
+    // Initialize event listeners for the Code Sprint UI
+    initCodeSprintListeners() {
+        console.log("Initializing Code Sprint listeners");
+        
+        // Set up GPU toggle listener
+        const gpuToggle = document.getElementById('allocate-gpu-toggle');
+        if (gpuToggle) {
+            gpuToggle.addEventListener('change', () => {
+                // Update the GPU usage bar
+                const gpuBar = document.getElementById('gpu-usage-bar');
+                if (gpuBar) {
+                    if (gpuToggle.checked) {
+                        gpuBar.style.width = '100%';
+                        gpuBar.classList.add('active');
+                    } else {
+                        gpuBar.style.width = '0%';
+                        gpuBar.classList.remove('active');
+                    }
+                }
+                
+                // Update success probability based on new GPU setting
+                this.updateSuccessProbability();
+            });
+        }
+        
+        // Set up Start Sprint button
+        const startSprintBtn = document.getElementById('start-sprint-btn');
+        if (startSprintBtn) {
+            startSprintBtn.addEventListener('click', () => this.startSprint());
+        }
+        
+        // Set up YOLO button
+        const yoloBtn = document.getElementById('yolo-btn');
+        if (yoloBtn) {
+            yoloBtn.addEventListener('click', () => this.handleYolo());
+        }
+        
+        // Set up Continue button
+        const continueBtn = document.getElementById('continue-btn');
+        if (continueBtn) {
+            continueBtn.addEventListener('click', () => {
+                // Hide sprint result
+                const sprintResult = document.getElementById('sprint-result');
+                if (sprintResult) {
+                    sprintResult.classList.add('hidden');
+                }
+                
+                // Show the sprint workspace again
+                this.showSprintWorkspace();
+                
+                // Reset timer display
+                this.updateTimerDisplay();
+            });
+        }
+    }
+
+    // Create a project card element
+    createProjectCard(project, index) {
+        if (!project) {
+            console.error("Cannot create card for undefined project");
+            // Return a placeholder card
+            const placeholderCard = document.createElement('div');
+            placeholderCard.className = 'project-card error';
+            placeholderCard.textContent = "Error: Missing project data";
+            return placeholderCard;
+        }
+
+        try {
+            const card = document.createElement('div');
+            card.className = 'project-card';
+            card.dataset.projectIndex = index;
+            
+            // Calculate progress percentage, ensuring we don't divide by zero
+            const requiredProgress = project.requiredProgress || 100;
+            const progressPercent = Math.min(100, Math.round((project.progress / requiredProgress) * 100));
+            
+            // Format difficulty as text
+            let difficultyText = 'Easy';
+            
+            if (project.difficulty >= 2.5) {
+                difficultyText = 'Very Hard';
+            } else if (project.difficulty >= 2) {
+                difficultyText = 'Hard';
+            } else if (project.difficulty >= 1.5) {
+                difficultyText = 'Medium';
+            } else if (project.difficulty >= 1.2) {
+                difficultyText = 'Easy';
+            } else {
+                difficultyText = 'Very Easy';
+            }
+            
+            // Create card content
+            card.innerHTML = `
+                <div class="project-card-header">
+                    <div class="project-card-title">${project.name || 'Unnamed Project'}</div>
+                    <div class="project-card-type">${project.typeName || project.type || 'Unknown'}</div>
+                </div>
+                <div class="project-card-details">
+                    <div class="project-card-detail">
+                        <div class="detail-name">Difficulty:</div>
+                        <div class="detail-value">${difficultyText}</div>
+                    </div>
+                    <div class="project-card-detail">
+                        <div class="detail-name">Reward:</div>
+                        <div class="detail-value">$${project.reward || 0}</div>
+                    </div>
+                </div>
+                <div class="project-card-progress">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                    <div class="progress-text">${progressPercent}% complete</div>
+                </div>
+            `;
+            
+            // Add click event to select this project
+            const self = this;
+            card.addEventListener('click', function() {
+                self.selectProject(index);
+            });
+            
+            return card;
+        } catch (error) {
+            console.error("Error creating project card:", error);
+            
+            // Return a fallback card on error
+            const errorCard = document.createElement('div');
+            errorCard.className = 'project-card error';
+            errorCard.textContent = "Error creating project card";
+            return errorCard;
+        }
+    }
+    
+    // Select a project by index
+    selectProject(index) {
+        console.log(`Selecting project at index: ${index}`);
+        
+        try {
+            // Validate index and game state
+            if (!this.gameState || !this.gameState.activeProjects) {
+                console.error("Cannot select project: Game state or active projects not available");
+                return;
+            }
+            
+            if (index < 0 || index >= this.gameState.activeProjects.length) {
+                console.error(`Invalid project index: ${index}, max: ${this.gameState.activeProjects.length - 1}`);
+                return;
+            }
+            
+            // Clear previous selection
+            const projectCards = document.querySelectorAll('.project-card');
+            projectCards.forEach(card => card.classList.remove('selected'));
+            
+            // Mark selected card
+            const selectedCard = document.querySelector(`.project-card[data-project-index="${index}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            } else {
+                console.warn(`Card element for project index ${index} not found in DOM`);
+            }
+            
+            // Get project
+            const project = this.gameState.activeProjects[index];
+            
+            // Update selected project details
+            this.updateSelectedProjectDetails(project, index);
+            
+            // Store the selected project index
+            this._selectedProjectIndex = index;
+            
+            // Show the sprint workspace
+            this.showSprintWorkspace();
+            
+            // Calculate and display success probability
+            this.updateSuccessProbability();
+        } catch (error) {
+            console.error("Error in selectProject:", error);
+        }
+    }
+    
+    // Show the sprint workspace
+    showSprintWorkspace() {
+        try {
+            const sprintWorkspace = document.getElementById('sprint-workspace');
+            if (sprintWorkspace) {
+                sprintWorkspace.classList.remove('hidden');
+            } else {
+                console.error("Sprint workspace element not found");
+            }
+        } catch (error) {
+            console.error("Error in showSprintWorkspace:", error);
+        }
+    }
+    
+    // Update the selected project details display
+    updateSelectedProjectDetails(project, index) {
+        try {
+            if (!project) {
+                console.error("Cannot update details for undefined project");
+                return;
+            }
+            
+            const detailsContainer = document.getElementById('selected-project-details');
+            if (!detailsContainer) {
+                console.error("Selected project details container not found");
+                return;
+            }
+            
+            // Format difficulty as stars
+            let difficultyStars = '';
+            const difficulty = Math.min(5, Math.ceil(project.difficulty || 1));
+            for (let i = 1; i <= 5; i++) {
+                if (i <= difficulty) {
+                    difficultyStars += '<span class="star">★</span>';
+                } else {
+                    difficultyStars += '<span class="star empty">☆</span>';
+                }
+            }
+            
+            // Calculate progress percentage
+            const requiredProgress = project.requiredProgress || 100;
+            const progressPercent = Math.min(100, Math.round((project.progress / requiredProgress) * 100));
+            const remainingProgress = Math.max(0, requiredProgress - project.progress);
+            
+            // Determine project status text
+            let statusText = 'Not Started';
+            let statusClass = 'not-started';
+            
+            if (project.completed) {
+                statusText = 'Completed';
+                statusClass = 'complete';
+            } else if (progressPercent >= 75) {
+                statusText = 'Advanced';
+                statusClass = 'advanced';
+            } else if (progressPercent > 0) {
+                statusText = 'In Progress';
+                statusClass = 'in-progress';
+            }
+            
+            // Format project type
+            const projectType = project.typeName || this.getProjectTypeName(project.type) || project.type || 'Unknown';
+            
+            // Create the detailed view
+            detailsContainer.innerHTML = `
+                <div class="selected-project-content">
+                    <div class="selected-project-header">
+                        <div class="selected-project-title">${project.name || 'Unnamed Project'}</div>
+                        <div class="selected-project-reward">$${project.reward || 0}</div>
+                    </div>
+                    
+                    <div class="selected-project-metrics">
+                        <div class="project-metric">
+                            <div class="metric-name">Type</div>
+                            <div class="metric-value">${projectType}</div>
+                        </div>
+                        <div class="project-metric">
+                            <div class="metric-name">Difficulty</div>
+                            <div class="metric-value difficulty-stars">${difficultyStars}</div>
+                        </div>
+                        <div class="project-metric">
+                            <div class="metric-name">Status</div>
+                            <div class="metric-value ${statusClass}">${statusText}</div>
+                        </div>
+                    </div>
+                    
+                    ${project.description ? `
+                    <div class="selected-project-description">
+                        ${project.description}
+                    </div>` : ''}
+                    
+                    <div class="selected-project-progress">
+                        <div class="progress-label">
+                            <div class="progress-text">Progress: ${progressPercent}%</div>
+                            <div class="progress-text">Remaining: ${remainingProgress}/${requiredProgress}</div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error("Error in updateSelectedProjectDetails:", error);
+        }
+    }
+
+    // Calculate and update success probability display
+    updateSuccessProbability() {
+        try {
+            if (typeof this._selectedProjectIndex === 'undefined') {
+                console.error("No project selected for probability calculation");
+                return;
+            }
+            
+            // Validate dependencies
+            if (!this.projectManager || !this.hardwareManager) {
+                console.error("Cannot calculate success probability: Missing managers", {
+                    hasProjectManager: !!this.projectManager,
+                    hasHardwareManager: !!this.hardwareManager
+                });
+                return;
+            }
+            
+            // Get selected project index
+            const projectIndex = this._selectedProjectIndex;
+            
+            // Default AI model and prompt technique 
+            const aiModelKey = 'gpt-3'; // Use default model
+            const promptKey = 'basic-instruction'; // Use basic instruction prompt
+            
+            // Check if GPU is allocated
+            const gpuToggle = document.getElementById('allocate-gpu-toggle');
+            const gpuAllocated = gpuToggle && gpuToggle.checked;
+            
+            try {
+                // Calculate success probability
+                const probabilityResult = this.projectManager.calculateSuccessProbability(
+                    projectIndex,
+                    aiModelKey,
+                    promptKey,
+                    gpuAllocated
+                );
+                
+                if (probabilityResult.success) {
+                    // Update probability display
+                    const probabilityElement = document.getElementById('sprint-success-prob');
+                    if (probabilityElement) {
+                        // Format as percentage
+                        const probabilityPercentage = Math.round(probabilityResult.probability * 100);
+                        probabilityElement.textContent = probabilityPercentage + '%';
+                        
+                        // Add color class based on probability
+                        probabilityElement.className = 'probability-value';
+                        if (probabilityPercentage < 40) {
+                            probabilityElement.classList.add('low');
+                        } else if (probabilityPercentage < 70) {
+                            probabilityElement.classList.add('medium');
+                        } else {
+                            probabilityElement.classList.add('high');
+                        }
+                    }
+                    
+                    // Store data for timer completion
+                    this._currentSprintData = {
+                        projectIndex: projectIndex,
+                        aiModelKey: aiModelKey,
+                        promptKey: promptKey,
+                        gpuAllocated: gpuAllocated,
+                        probability: probabilityResult.probability
+                    };
+                } else {
+                    console.error("Error calculating success probability:", probabilityResult.message);
+                }
+            } catch (e) {
+                console.error("Exception in calculateSuccessProbability:", e);
+                
+                // Set a fallback probability
+                const probabilityElement = document.getElementById('sprint-success-prob');
+                if (probabilityElement) {
+                    probabilityElement.textContent = "40%";
+                    probabilityElement.className = 'probability-value medium';
+                }
+                
+                // Set fallback data
+                this._currentSprintData = {
+                    projectIndex: projectIndex,
+                    aiModelKey: aiModelKey,
+                    promptKey: promptKey,
+                    gpuAllocated: gpuAllocated,
+                    probability: 0.4
+                };
+            }
+        } catch (error) {
+            console.error("Error in updateSuccessProbability:", error);
+        }
+    }
+
+    // Handle YOLO button click (immediately finish the sprint)
+    handleYolo() {
+        try {
+            // Just complete the timer right away
+            this.completeSprintTimer();
+            
+            // Add a YOLO-specific notification
+            this.showNotification("YOLO! Skipping the timer...", "info");
+        } catch (error) {
+            console.error("Error handling YOLO click:", error);
         }
     }
 } 

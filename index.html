@@ -115,48 +115,87 @@
                     </div>
                     
                     <div id="coding-panel" class="panel hidden">
-                        <h2>Coding Session <span class="subtext">AI-assisted development</span></h2>
-                        <div id="current-project-info"></div>
-                        <div id="coding-interface">
-                            <div class="project-selection">
-                                <label for="project-select">Select Project:</label>
-                                <select id="project-select"></select>
+                        <h2>Code Sprint <span class="subtext">Strategic Coding</span></h2>
+                        
+                        <div class="coding-interface-container">
+                            <!-- Left side: Project selection as cards -->
+                            <div class="project-cards-container">
+                                <h3>Available Projects</h3>
+                                <div id="project-cards-grid">
+                                    <!-- Project cards will be added here dynamically -->
+                                </div>
                             </div>
-                            <div class="prompt-input-wrapper">
-                                <div class="setup-section">
-                                    <div class="setup-row">
-                                        <label for="ai-model-select">AI Model:</label>
-                                        <select id="ai-model-select"></select>
-                                    </div>
-                                    <div class="setup-row">
-                                        <label for="prompt-technique-select">Prompt Technique:</label>
-                                        <select id="prompt-technique-select"></select>
-                                    </div>
-                                    <div class="setup-row gpu-allocation">
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="allocate-gpu-toggle">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                        <span class="toggle-label">Allocate GPU</span>
-                                        <span class="success-probability-bonus">(+5% success)</span>
+                            
+                            <!-- Right side: Sprint interface -->
+                            <div class="sprint-interface">
+                                <div id="selected-project-details">
+                                    <div class="no-project-selected">
+                                        <p>Select a project to begin coding sprint</p>
                                     </div>
                                 </div>
-                                <div class="prompt-input-section">
-                                    <label for="prompt-input">Write your prompt to the AI:</label>
-                                    <textarea id="prompt-input" placeholder="Be specific about what you want the AI to code... The more detailed your prompt, the better the results will be."></textarea>
+                                
+                                <div id="sprint-workspace" class="hidden">
+                                    <!-- Agent and Timer Section -->
+                                    <div class="agent-timer-section">
+                                        <div class="agent-section">
+                                            <div class="agent-avatar">
+                                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMzMzMiIHN0cm9rZT0iIzVlZWFkNCIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzVlZWFkNCI+QUk8L3RleHQ+PC9zdmc+" alt="AI Agent" class="agent-icon">
+                                            </div>
+                                            <div class="agent-info">
+                                                <div class="agent-name">Basic Agent</div>
+                                                <div class="gpu-allocation">
+                                                    <div class="gpu-meter">
+                                                        <div class="gpu-label">GPU</div>
+                                                        <div class="gpu-bar-container">
+                                                            <div id="gpu-usage-bar" class="gpu-bar"></div>
+                                                        </div>
+                                                    </div>
+                                                    <label class="toggle-switch-large">
+                                                        <input type="checkbox" id="allocate-gpu-toggle">
+                                                        <span class="toggle-slider-large"></span>
+                                                        <span class="toggle-label">Allocate GPU <span class="success-bonus">(+5% success)</span></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="timer-section">
+                                            <div class="timer-circle-large">
+                                                <svg width="150" height="150" viewBox="0 0 150 150">
+                                                    <circle cx="75" cy="75" r="68" fill="none" stroke="#333" stroke-width="12" />
+                                                    <circle cx="75" cy="75" r="68" fill="none" stroke="#5eead4" stroke-width="12"
+                                                        stroke-dasharray="427.25" stroke-dashoffset="0" id="timer-circle" />
+                                                </svg>
+                                                <div class="timer-text" id="timer-text">2:00</div>
+                                            </div>
+                                            <div class="probability-display">
+                                                <div class="probability-label">Success Probability:</div>
+                                                <div class="probability-value" id="sprint-success-prob">0%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="sprint-actions">
+                                        <button id="start-sprint-btn" class="action-button-large">Start Sprint</button>
+                                        <button id="yolo-btn" class="action-button-large yolo-btn hidden">YOLO!</button>
+                                    </div>
                                 </div>
-                                <button id="submit-prompt-btn">Execute Prompt <span class="cost-indicator">(1 Time Block)</span></button>
-                            </div>
-                            <div id="prompt-library-section">
-                                <h3>Prompt Library</h3>
-                                <div id="prompt-library-list">
-                                    <p class="empty-state">Complete projects to earn prompt templates!</p>
+                                
+                                <!-- Sprint Results Section -->
+                                <div id="sprint-result" class="hidden">
+                                    <div id="result-message"></div>
+                                    <div id="result-details"></div>
+                                    <button id="continue-btn" class="action-button-large">Continue</button>
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Bottom section: Coding results history -->
                         <div id="coding-results">
                             <!-- AI responses and results will appear here -->
                         </div>
+                        
                         <button class="back-btn" id="coding-back-btn">Back</button>
                     </div>
                     
@@ -381,5 +420,8 @@
     
     <!-- Computer clickability fix script -->
     <script src="js/fix-computer.js"></script>
+    
+    <!-- Debug script for Code Sprint button -->
+    <script src="debug/debug-clickability.js"></script>
 </body>
 </html> 

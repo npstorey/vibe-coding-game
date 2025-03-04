@@ -601,4 +601,315 @@ export class ProjectManager {
         // Not used in Phase 1, but will be implemented in later versions
         // Will return list of projects with approaching deadlines
     }
+
+    // Get the project success probability before starting a sprint
+    calculateSuccessProbability(projectIndex, aiModelKey, promptKey, gpuAllocated = false) {
+        if (projectIndex < 0 || projectIndex >= this.gameState.activeProjects.length) {
+            return { 
+                success: false, 
+                message: 'Invalid project index',
+                probability: 0
+            };
+        }
+        
+        const project = this.gameState.activeProjects[projectIndex];
+        
+        // Get AI model
+        const aiModel = this.aiModelManager.getModel(aiModelKey);
+        if (!aiModel) {
+            return { 
+                success: false, 
+                message: 'Invalid AI model',
+                probability: 0
+            };
+        }
+        
+        // Get prompt
+        const prompt = this.promptLibrary.getPrompt(promptKey);
+        if (!prompt || !prompt.unlocked) {
+            return { 
+                success: false, 
+                message: 'Invalid or locked prompt',
+                probability: 0
+            };
+        }
+        
+        // Get hardware tier
+        const maxAITier = hardwareManager.getMaxAITier();
+        if (aiModel.tier > maxAITier) {
+            return { 
+                success: false, 
+                message: `Your hardware (Tier ${maxAITier}) cannot run this AI model (Tier ${aiModel.tier})`,
+                probability: 0
+            };
+        }
+        
+        // Calculate base success rate from AI model
+        let successRate = 0.4; // Base 40% success chance
+        
+        // Add bonus from AI model attributes
+        successRate += (aiModel.attributes.directionFollowing / 20); // Up to +40% from direction following
+        successRate += (aiModel.attributes.reasoning / 25); // Up to +32% from reasoning
+        
+        // Project difficulty reduces success rate
+        successRate -= (project.difficulty * 0.1); // -10% per difficulty level
+        
+        // Add prompt technique bonus (use existing logic from updateProjectProgress)
+        let promptBonus = 0;
+        switch (promptKey) {
+            case 'basic-instruction':
+                promptBonus = 0.05; // +5% from basic instruction
+                break;
+            case 'step-by-step':
+                // +10% for complex logic tasks
+                promptBonus = 0.1;
+                break;
+            case 'few-shot':
+                // +10% for tutorial-like projects
+                if (project.type === 'course') {
+                    promptBonus = 0.1;
+                } else {
+                    promptBonus = 0.05;
+                }
+                break;
+            case 'persona-context':
+                // +15% for branded/tone projects
+                if (project.type === 'influencer') {
+                    promptBonus = 0.15;
+                } else {
+                    promptBonus = 0.05;
+                }
+                break;
+            case 'iterative-refinement':
+                // +10% for all project types
+                promptBonus = 0.1;
+                break;
+            case 'creative-temperature':
+                // +15% for creative tasks, -5% for technical
+                if (project.type === 'game') {
+                    promptBonus = 0.15;
+                } else if (project.type === 'b2b') {
+                    promptBonus = -0.05;
+                } else {
+                    promptBonus = 0.05;
+                }
+                break;
+            case 'debugging-error-correction':
+                // +20% for fixing failing projects
+                if (project.progress > 0 && project.progress < 50) {
+                    promptBonus = 0.2;
+                } else {
+                    promptBonus = 0.1;
+                }
+                break;
+            default:
+                promptBonus = 0;
+        }
+        
+        // Add GPU bonus if allocated
+        let gpuBonus = 0;
+        if (gpuAllocated) {
+            gpuBonus = 0.05; // +5% success probability when GPU is allocated
+        }
+        
+        // Apply all bonuses to success rate
+        successRate += promptBonus;
+        successRate += gpuBonus;
+        
+        // Hardware tier bonus
+        // Higher tier hardware than required gives bonus
+        if (maxAITier > aiModel.tier) {
+            successRate += 0.1 * (maxAITier - aiModel.tier); // +10% per tier above required
+        }
+        
+        // Market trend bonus
+        if (this.gameState.marketTrends && this.gameState.marketTrends.current) {
+            this.gameState.marketTrends.current.forEach(trend => {
+                const trendData = this.gameState.marketTrends.trendCycles[trend];
+                if (trendData && trendData.impact[project.type]) {
+                    // Convert market multiplier (e.g. 1.5) to success rate bonus (e.g. +0.1)
+                    const trendBonus = (trendData.impact[project.type] - 1) * 0.2;
+                    successRate += trendBonus;
+                }
+            });
+        }
+        
+        // Clamp success rate between 0.1 and 0.95 (never impossible, never guaranteed)
+        successRate = Math.max(0.1, Math.min(0.95, successRate));
+        
+        return {
+            success: true,
+            probability: successRate,
+            project: {
+                name: project.name,
+                type: project.type,
+                difficulty: project.difficulty,
+                reward: project.reward,
+                progress: project.progress
+            },
+            aiModel: aiModel.name,
+            promptTechnique: prompt.name,
+            gpuBonus: gpuBonus * 100 // Convert to percentage
+        };
+    }
+    
+    // Execute a coding sprint with the timer completed
+    executeSprintWithTimer(projectIndex, aiModelKey, promptKey, hardwareManager, promptText = '') {
+        // First get the success probability calculation
+        const probabilityResult = this.calculateSuccessProbability(
+            projectIndex, 
+            aiModelKey, 
+            promptKey, 
+            hardwareManager.getGPUStatus().inUse
+        );
+        
+        if (!probabilityResult.success) {
+            return probabilityResult; // Return the error
+        }
+        
+        const project = this.gameState.activeProjects[projectIndex];
+        const successRate = probabilityResult.probability;
+        
+        // Determine if sprint is successful
+        const random = Math.random();
+        const isSuccess = random <= successRate;
+        
+        if (isSuccess) {
+            // Calculate progress amount based on synergy
+            // Base progress is 15%, can go up to 30% with good synergy
+            const progressAmount = 15 + Math.floor(successRate * 15);
+            
+            // Update project progress
+            project.progress += progressAmount;
+            project.workedOnToday = true;
+            
+            // Record this sprint
+            project.sprints.push({
+                day: this.gameState.day,
+                progress: progressAmount,
+                aiModel: aiModelKey,
+                prompt: promptKey,
+                promptText: promptText,
+                gpuUsed: hardwareManager.getGPUStatus().inUse,
+                timerUsed: true
+            });
+            
+            // Increment days taken counter if this is the first sprint today
+            if (project.sprints.filter(sprint => sprint.day === this.gameState.day).length === 1) {
+                project.daysTaken++;
+            }
+            
+            // Increase skills based on project and AI model
+            const aiModel = this.aiModelManager.getModel(aiModelKey);
+            const skillGain = 0.1 * project.difficulty * (aiModel.tier / 2);
+            this.gameState.increaseSkill('coding', skillGain);
+            this.gameState.increaseSkill('prompt', skillGain * 0.8);
+            
+            // Check if project is completed
+            if (project.progress >= project.requiredProgress) {
+                return this.completeProject(projectIndex);
+            }
+            
+            return {
+                success: true,
+                isSprintSuccess: true,
+                progress: project.progress,
+                progressGained: progressAmount,
+                successRate: successRate,
+                gpuUsed: hardwareManager.getGPUStatus().inUse,
+                gpuBonus: probabilityResult.gpuBonus,
+                skillGain: {
+                    coding: skillGain,
+                    prompt: skillGain * 0.8
+                },
+                reward: 0
+            };
+        } else {
+            // Failed sprint - small progress or none
+            const minorProgress = Math.random() < 0.3 ? Math.floor(5 + (successRate * 5)) : 0;
+            
+            if (minorProgress > 0) {
+                project.progress += minorProgress;
+            }
+            
+            project.workedOnToday = true;
+            
+            // Record this sprint
+            project.sprints.push({
+                day: this.gameState.day,
+                progress: minorProgress,
+                aiModel: aiModelKey,
+                prompt: promptKey,
+                promptText: promptText,
+                gpuUsed: hardwareManager.getGPUStatus().inUse,
+                success: false,
+                timerUsed: true
+            });
+            
+            // Increment days taken counter if this is the first sprint today
+            if (project.sprints.filter(sprint => sprint.day === this.gameState.day).length === 1) {
+                project.daysTaken++;
+            }
+            
+            // Skill gain is smaller for failed sprints
+            const aiModel = this.aiModelManager.getModel(aiModelKey);
+            const skillGain = 0.05 * project.difficulty * (aiModel.tier / 2);
+            this.gameState.increaseSkill('coding', skillGain);
+            this.gameState.increaseSkill('prompt', skillGain * 0.4);
+            
+            return {
+                success: true,
+                isSprintSuccess: false,
+                progress: project.progress,
+                progressGained: minorProgress,
+                message: minorProgress > 0 
+                    ? `Sprint partially successful with ${minorProgress}% progress.` 
+                    : 'Sprint failed, no progress made.',
+                successRate: successRate,
+                gpuUsed: hardwareManager.getGPUStatus().inUse,
+                skillGain: {
+                    coding: skillGain,
+                    prompt: skillGain * 0.4
+                }
+            };
+        }
+    }
+    
+    // Get full project details formatted for display
+    getProjectDetails(projectIndex) {
+        if (projectIndex < 0 || projectIndex >= this.gameState.activeProjects.length) {
+            return null;
+        }
+        
+        const project = this.gameState.activeProjects[projectIndex];
+        
+        // Calculate remaining progress
+        const remainingProgress = Math.max(0, project.requiredProgress - project.progress);
+        
+        // Format difficulty as text
+        let difficultyText = 'Easy';
+        if (project.difficulty >= 2.5) {
+            difficultyText = 'Very Hard';
+        } else if (project.difficulty >= 2) {
+            difficultyText = 'Hard';
+        } else if (project.difficulty >= 1.5) {
+            difficultyText = 'Medium';
+        }
+        
+        return {
+            name: project.name,
+            type: project.type,
+            typeName: this.projectTypes[project.type]?.name || project.type,
+            description: this.projectTypes[project.type]?.description || 'Custom project',
+            difficulty: project.difficulty,
+            difficultyText: difficultyText,
+            reward: project.reward,
+            progress: project.progress,
+            requiredProgress: project.requiredProgress,
+            remainingProgress: remainingProgress,
+            completed: project.completed,
+            daysTaken: project.daysTaken,
+            gpuRequirement: 1 // All projects require at least 1 GPU for now
+        };
+    }
 } 
