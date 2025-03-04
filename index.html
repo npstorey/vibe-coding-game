@@ -322,14 +322,6 @@
                 <button id="debug-toggle-panels" style="padding: 5px 10px; width: 100%;">Toggle Test Panels</button>
             </div>
         </div>
-
-        <!-- Debug Panel for Direct Testing -->
-        <div id="direct-debug-panel" style="position: fixed; bottom: 10px; left: 10px; z-index: 10001; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; color: white;">
-            <h3 style="margin: 0 0 10px 0; font-size: 14px;">Debug Panel</h3>
-            <button id="direct-ui-test" style="padding: 5px 10px; margin-bottom: 5px; width: 100%; cursor: pointer;">Show UI Directly</button>
-            <button id="direct-computer-test" style="padding: 5px 10px; margin-bottom: 5px; width: 100%; cursor: pointer;">Show Computer Screen</button>
-            <button id="refresh-page" style="padding: 5px 10px; width: 100%; cursor: pointer;">Refresh Page</button>
-        </div>
     </div>
 
     <!-- Direct interaction script for immediate handling - REPLACE WITH PROGRAMMATIC EVENTS -->
@@ -340,47 +332,6 @@
      * Using inline event handlers with eval() can cause CSP issues.
      */
     </script>
-
-    <!-- Add direct debug script before other scripts -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Direct UI test button
-            document.getElementById('direct-ui-test').addEventListener('click', function() {
-                // Show UI overlay
-                var uiOverlay = document.getElementById('ui-overlay');
-                if (uiOverlay) {
-                    uiOverlay.classList.remove('hidden');
-                }
-                
-                // Hide loading screen
-                var loadingScreen = document.getElementById('loading-screen');
-                if (loadingScreen) {
-                    loadingScreen.classList.add('hidden');
-                }
-                
-                console.log("UI overlay shown directly via debug button");
-            });
-            
-            // Direct computer screen test button
-            document.getElementById('direct-computer-test').addEventListener('click', function() {
-                // Show UI overlay and computer screen
-                var uiOverlay = document.getElementById('ui-overlay');
-                var computerScreen = document.getElementById('computer-screen');
-                
-                if (uiOverlay) {
-                    uiOverlay.classList.remove('hidden');
-                }
-                
-                if (computerScreen) {
-                    computerScreen.classList.remove('hidden');
-                }
-                
-                // Hide loading screen
-                var loadingScreen = document.getElementById('loading-screen');
-                if (loadingScreen) {
-                    loadingScreen.classList.add('hidden');
-                }
-                
                 console.log("Computer screen shown directly via debug button");
             });
             
