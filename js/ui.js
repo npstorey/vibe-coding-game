@@ -41,24 +41,28 @@ export class UI {
     
     // Initialize UI - Called by Game.initGame()
     init() {
-        console.log("Initializing UI...");
+        console.log('UI initializing...');
         
-        try {
-            // Hide loading screen if it's visible
-            this.hideLoadingScreen();
-            
-            // Show UI overlay
-            if (this.uiOverlay) {
-                this.uiOverlay.classList.remove('hidden');
+        // Remove any debug elements that might exist
+        document.querySelectorAll('[style*="TEST SCRIPT SHOWING CODING PANEL"]').forEach(el => el.remove());
+        document.querySelectorAll('button').forEach(btn => {
+            if (btn.textContent.includes('TEST: Show Code Sprint')) {
+                btn.remove();
             }
-            
-            // Update initial stats display
-            this.updateStats();
-            
-            console.log("UI initialization complete");
-        } catch (error) {
-            console.error("Error initializing UI:", error);
+        });
+        
+        // Display loading screen initially
+        this.updateStats();
+        if (this.loadingScreen) {
+            this.loadingScreen.classList.remove('hidden');
         }
+        
+        // Set up computer screen
+        if (this.computerScreen) {
+            this.computerScreen.classList.add('hidden');
+        }
+        
+        return this;
     }
     
     // Hide the loading screen
@@ -86,8 +90,33 @@ export class UI {
         this.shopManager = shopManager;
         this.resourceManager = resourceManager;
         
+        // Ensure project manager has access to hardware manager and UI
+        if (this.projectManager) {
+            if (this.hardwareManager) {
+                this.projectManager.hardwareManager = this.hardwareManager;
+                console.log("Hardware manager reference added to project manager");
+            }
+            
+            // Set UI reference in project manager for debug testing modes
+            this.projectManager.setUI(this);
+        }
+        
+        // Initialize debug tools
+        this.initDebugTools();
+        
+        // Remove any debug elements first
+        this.removeDebugElements();
+        
         // Initialize panels
         this.initPanels();
+        
+        // Set up debug button handler if it exists
+        const debugBtn = document.getElementById('debug-show-computer');
+        if (debugBtn) {
+            debugBtn.addEventListener('click', () => {
+                this.debugShowCodingPanel();
+            });
+        }
         
         var self = this;
         
@@ -259,6 +288,12 @@ export class UI {
         console.log("Switching to panel: " + panelName);
         
         try {
+            // Special case for coding panel - use our more robust method
+            if (panelName === 'coding' || panelName === 'coding-panel') {
+                console.log("Using ensureCodingPanelVisible for coding panel");
+                return this.ensureCodingPanelVisible();
+            }
+            
             // Check if we're leaving the coding panel and release GPU if needed
             var codingPanel = document.getElementById('coding-panel');
             if (codingPanel && !codingPanel.classList.contains('hidden') && 
@@ -309,8 +344,20 @@ export class UI {
                     this.initSocialPanel();
                 } else if (panelName === 'coding' || panelName === 'coding-panel') {
                     console.log("Coding panel detected, updating project selection");
-                    this.updateProjectSelection();
-                    this.initCodeSprintListeners();
+                    
+                    // Check if updateProjectSelection exists
+                    if (typeof this.updateProjectSelection === 'function') {
+                        this.updateProjectSelection();
+                    } else {
+                        console.error("updateProjectSelection is not a function");
+                    }
+                    
+                    // Check if initCodeSprintListeners exists
+                    if (typeof this.initCodeSprintListeners === 'function') {
+                        this.initCodeSprintListeners();
+                    } else {
+                        console.error("initCodeSprintListeners is not a function");
+                    }
                 }
             } else {
                 console.error("Panel not found: " + panelName);
@@ -685,71 +732,151 @@ export class UI {
             this.stopSprintTimer();
             
             if (!this._currentSprintData) {
+                console.error("No sprint data available for completion");
                 this.showNotification("Sprint data not available", "error");
+                this.showErrorResult("Missing sprint data");
                 return;
             }
+            
+            console.log("Current sprint data:", this._currentSprintData);
             
             // Show timer completion notification
             this.showNotification("Sprint completed!", "info");
             
             // Execute the sprint with the project manager
-            if (this.projectManager && this.hardwareManager) {
-                console.log("Executing sprint with timer data:", this._currentSprintData);
-                
-                try {
-                    const result = this.projectManager.executeSprintWithTimer(
-                        this._currentSprintData.projectIndex,
-                        this._currentSprintData.aiModelKey,
-                        this._currentSprintData.promptKey,
-                        this.hardwareManager,
-                        "Code Sprint completed" // Simplified prompt text
-                    );
-                    
-                    console.log("Sprint result:", result);
-                    
-                    // Display results
-                    this.showSprintResult(result);
-                    
-                    // Also add to coding results history
-                    this.addCodingResult(result, "Code Sprint completed");
-                    
-                    // Update UI components
-                    this.updateStats();
-                    
-                    // Update project cards and selection to reflect new progress
-                    this.updateProjectSelection();
-                    
-                    // Reselect the current project
-                    if (typeof this._selectedProjectIndex !== 'undefined') {
-                        // Make sure the project still exists (it might have been completed and removed)
-                        if (this.gameState.activeProjects && 
-                            this._selectedProjectIndex < this.gameState.activeProjects.length) {
-                            this.selectProject(this._selectedProjectIndex);
-                        } else if (this.gameState.activeProjects && this.gameState.activeProjects.length > 0) {
-                            // Select the first project if the previous one is gone
-                            this.selectProject(0);
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error executing sprint with timer:", error);
-                    this.showNotification("Error processing sprint results", "error");
+            if (!this.projectManager) {
+                console.error("Project manager not available");
+                this.showNotification("Project manager not available", "error");
+                this.showErrorResult("System error: Project manager not available");
+                return;
+            }
+            
+            if (!this.hardwareManager) {
+                console.error("Hardware manager not available");
+                this.showNotification("Hardware manager not available", "error");
+                this.showErrorResult("System error: Hardware manager not available");
+                return;
+            }
+            
+            console.log("Executing sprint with timer data:", this._currentSprintData);
+            
+            try {
+                // Ensure all required parameters are valid
+                if (typeof this._currentSprintData.projectIndex !== 'number') {
+                    throw new Error("Invalid project index: " + this._currentSprintData.projectIndex);
                 }
                 
-                // Release GPU if it was allocated
-                if (this._currentSprintData.gpuAllocated) {
-                    this.hardwareManager.releaseGPU();
-                    
-                    // Update GPU bar
-                    const gpuBar = document.getElementById('gpu-usage-bar');
-                    if (gpuBar) {
-                        gpuBar.style.width = '0%';
-                        gpuBar.classList.remove('active');
-                    }
-                    
-                    this.updateStats();
+                if (!this._currentSprintData.aiModelKey) {
+                    throw new Error("Invalid AI model key: " + this._currentSprintData.aiModelKey);
                 }
-            } else {
-                this.showNotification("Project manager or hardware manager not available", "error");
+                
+                if (!this._currentSprintData.promptKey) {
+                    throw new Error("Invalid prompt key: " + this._currentSprintData.promptKey);
+                }
+                
+                // Log the hardware manager state
+                console.log("Hardware manager state:", {
+                    defined: !!this.hardwareManager,
+                    gpuStatus: this.hardwareManager ? this.hardwareManager.getGPUStatus() : null
+                });
+                
+                const result = this.projectManager.executeSprintWithTimer(
+                    this._currentSprintData.projectIndex,
+                    this._currentSprintData.aiModelKey,
+                    this._currentSprintData.promptKey,
+                    this.hardwareManager,
+                    "Code Sprint completed" // Simplified prompt text
+                );
+                
+                console.log("Sprint result:", result);
+                
+                // Check if result is valid
+                if (!result) {
+                    throw new Error("Empty result returned from executeSprintWithTimer");
+                }
+                
+                if (!result.success) {
+                    throw new Error(result.message || "Failed to execute sprint");
+                }
+                
+                // Play different sound effects based on outcome
+                if (result.completed) {
+                    // Play project completion sound if available
+                    this.playSound('project-complete');
+                } else if (result.isSprintSuccess) {
+                    // Play success sound if available
+                    this.playSound('sprint-success');
+                } else {
+                    // Play failure sound if available
+                    this.playSound('sprint-fail');
+                }
+                
+                // Hide the timer container
+                document.getElementById('sprint-timer-container')?.classList.add('hidden');
+                
+                // Display results
+                this.showSprintResult(result);
+                
+                // Also add to coding results history
+                this.addCodingResult(result, "Code Sprint completed");
+                
+                // Update UI components
+                this.updateStats();
+                
+                // Update project cards and selection to reflect new progress
+                this.updateProjectSelection();
+                
+                // Reselect the current project if it wasn't completed
+                if (!result.completed && typeof this._selectedProjectIndex !== 'undefined') {
+                    // Make sure the project still exists (it might have been completed and removed)
+                    if (this.gameState.activeProjects && 
+                        this._selectedProjectIndex < this.gameState.activeProjects.length) {
+                        this.selectProject(this._selectedProjectIndex);
+                    } else if (this.gameState.activeProjects && this.gameState.activeProjects.length > 0) {
+                        // Select the first project if the previous one is gone
+                        this.selectProject(0);
+                    }
+                }
+            } catch (error) {
+                console.error("Error executing sprint with timer:", error);
+                this.showNotification("Error processing sprint results", "error");
+                
+                // Hide the timer container and show error result
+                document.getElementById('sprint-timer-container')?.classList.add('hidden');
+                
+                // Show error result
+                const sprintResult = document.getElementById('sprint-result');
+                if (sprintResult) {
+                    sprintResult.classList.remove('hidden');
+                    sprintResult.innerHTML = `
+                        <div id="result-message" style="color: #ff3333;">Error Processing Sprint</div>
+                        <div id="result-details">There was an error processing your sprint results. Please try again.</div>
+                        <button id="continue-btn" class="action-button-large">Continue</button>
+                    `;
+                    
+                    // Add event listener to the continue button
+                    const continueBtn = document.getElementById('continue-btn');
+                    if (continueBtn) {
+                        continueBtn.addEventListener('click', () => {
+                            sprintResult.classList.add('hidden');
+                            this.showSprintWorkspace();
+                        });
+                    }
+                }
+            }
+            
+            // Release GPU if it was allocated
+            if (this._currentSprintData.gpuAllocated) {
+                this.hardwareManager.releaseGPU();
+                
+                // Update GPU bar
+                const gpuBar = document.getElementById('gpu-usage-bar');
+                if (gpuBar) {
+                    gpuBar.style.width = '0%';
+                    gpuBar.classList.remove('active');
+                }
+                
+                this.updateStats();
             }
         } catch (error) {
             console.error("Error completing sprint timer:", error);
@@ -780,6 +907,19 @@ export class UI {
         }
     }
     
+    // Play a sound effect if available
+    playSound(soundId) {
+        // Optional method to play sound effects
+        // This is a placeholder method - actual sound implementation would depend on the game's audio system
+        try {
+            if (window.game && window.game.audio && typeof window.game.audio.playSound === 'function') {
+                window.game.audio.playSound(soundId);
+            }
+        } catch (e) {
+            console.log("Sound system not available:", e);
+        }
+    }
+    
     // Show the sprint result
     showSprintResult(result) {
         try {
@@ -790,6 +930,12 @@ export class UI {
             if (!sprintResult || !resultMessage || !resultDetails) {
                 console.error("Sprint result elements not found");
                 return;
+            }
+            
+            // Always hide the timer container first
+            const timerContainer = document.getElementById('sprint-timer-container');
+            if (timerContainer) {
+                timerContainer.classList.add('hidden');
             }
             
             // Hide sprint workspace
@@ -803,55 +949,125 @@ export class UI {
             // Show result container
             sprintResult.classList.remove('hidden');
             
-            // Set result class based on success/failure
+            // Set result class based on success/failure/completion
             sprintResult.className = 'sprint-result';
-            if (result.isSprintSuccess) {
+            if (result.completed) {
+                sprintResult.classList.add('completed');
+            } else if (result.isSprintSuccess) {
                 sprintResult.classList.add('success');
             } else {
                 sprintResult.classList.add('failure');
             }
             
-            // Set message
-            if (result.isSprintSuccess) {
+            // Set message with more distinct visuals for project completion
+            if (result.completed) {
+                resultMessage.innerHTML = `
+                    <div class="completion-banner">
+                        <div class="completion-icon">🏆</div>
+                        <div>Project Completed!</div>
+                    </div>
+                `;
+            } else if (result.isSprintSuccess) {
                 resultMessage.textContent = `Success! 🎉 +${result.progressGained}% Progress`;
-            } else if (result.completed) {
-                resultMessage.textContent = `Project Completed! 🚀 +$${result.reward}`;
             } else {
                 resultMessage.textContent = result.message || 'Sprint Failed 😕';
             }
             
-            // Set details
+            // Set details with enhanced visuals
             let detailsHTML = '';
             
-            // Add progress made
-            if (result.progressGained > 0) {
-                detailsHTML += `<div>Made <strong>${result.progressGained}%</strong> progress on the project.</div>`;
+            // For completed projects, show special completion banner
+            if (result.completed) {
+                detailsHTML += `
+                    <div class="completion-details">
+                        <div class="completion-reward">
+                            <div class="reward-label">Reward Earned</div>
+                            <div class="reward-amount">$${result.reward}</div>
+                        </div>
+                        ${result.multiplier > 1 ? `
+                            <div class="reward-multiplier">
+                                <div class="multiplier-label">Market Trend Bonus</div>
+                                <div class="multiplier-value">×${result.multiplier.toFixed(1)}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                // Show notification about project being moved to completed projects
+                detailsHTML += `
+                    <div class="completion-notification">
+                        <p>👉 Project has been moved to your "Completed Projects" list</p>
+                        ${result.earnedPrompt ? `<p>🎁 You earned a new prompt template: <strong>${result.earnedPrompt.name}</strong></p>` : ''}
+                    </div>
+                `;
+            } 
+            // For non-completed projects, show standard progress info
+            else {
+                // Add progress made
+                if (result.progressGained > 0) {
+                    // Show progress bar for better visualization
+                    const progressAfter = result.progress || 0;
+                    const progressBefore = progressAfter - result.progressGained;
+                    const progressPercent = Math.min(100, Math.round(progressAfter));
+                    
+                    detailsHTML += `
+                        <div class="progress-result">
+                            <div class="progress-text">Made <strong>${result.progressGained}%</strong> progress on the project</div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+                                <div class="progress-amount">${progressPercent}%</div>
+                            </div>
+                            <div class="progress-before-after">
+                                <span>${progressBefore}%</span>
+                                <span>→</span>
+                                <span>${progressAfter}%</span>
+                            </div>
+                        </div>
+                    `;
+                } else if (!result.isSprintSuccess) {
+                    detailsHTML += `
+                        <div class="failed-sprint">
+                            <div class="failure-icon">❌</div>
+                            <div>Your sprint didn't make any significant progress.</div>
+                            <div class="failure-tip">Try allocating GPU or using different prompt techniques!</div>
+                        </div>
+                    `;
+                }
             }
             
             // Add skill gains
             if (result.skillGain) {
-                detailsHTML += '<div style="margin-top:10px;">Skills gained:</div>';
-                detailsHTML += '<ul>';
+                detailsHTML += '<div class="skill-gains"><div class="skill-gains-title">Skills gained:</div>';
+                detailsHTML += '<ul class="skill-list">';
                 if (result.skillGain.coding > 0) {
                     detailsHTML += `<li>Coding: <strong>+${result.skillGain.coding.toFixed(2)}</strong></li>`;
                 }
                 if (result.skillGain.prompt > 0) {
                     detailsHTML += `<li>Prompt Engineering: <strong>+${result.skillGain.prompt.toFixed(2)}</strong></li>`;
                 }
-                detailsHTML += '</ul>';
+                detailsHTML += '</ul></div>';
             }
             
             // Add GPU usage info
             if (result.gpuUsed) {
-                detailsHTML += `<div style="margin-top:10px;">GPU boost applied: <strong>+${result.gpuBonus}%</strong> success probability</div>`;
+                detailsHTML += `<div class="gpu-usage-info">GPU boost applied: <strong>+${result.gpuBonus}%</strong> success probability</div>`;
             }
             
-            // Add reward if completed
-            if (result.completed) {
-                detailsHTML += `<div style="margin-top:15px;font-size:18px;">Reward: <strong>$${result.reward}</strong> added to your account!</div>`;
-            }
+            // Add continue button with contextual label
+            detailsHTML += `
+                <div class="continue-action">
+                    <button id="continue-btn" class="action-button-large">
+                        ${result.completed ? 'Back to Projects' : 'Continue Coding'}
+                    </button>
+                </div>
+            `;
             
             resultDetails.innerHTML = detailsHTML;
+            
+            // Add a notification showing project completion
+            if (result.completed) {
+                this.showNotification(`Project completed! Earned $${result.reward}`, "success", 8000);
+            }
             
             // Ensure the continue button has an event listener
             const continueBtn = document.getElementById('continue-btn');
@@ -863,7 +1079,13 @@ export class UI {
                 // Add new listener
                 newBtn.addEventListener('click', () => {
                     sprintResult.classList.add('hidden');
-                    this.showSprintWorkspace();
+                    
+                    // For completed projects, go back to projects panel
+                    if (result.completed) {
+                        this.switchPanel('projects-panel');
+                    } else {
+                        this.showSprintWorkspace();
+                    }
                 });
             } else {
                 console.error("Continue button not found");
@@ -993,32 +1215,73 @@ export class UI {
             if (!codeBtn._initialized) {
                 codeBtn.addEventListener('click', function() {
                     console.log("Code Sprint button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                        console.log("Time block deducted for Code Sprint - remaining:", self.gameState.getAvailableTimeBlocks());
-                        
-                        // Immediately update the time blocks counter in the UI
-                        if (self.timeBlocks) {
-                            self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
-                        }
-                        
-                        self.switchPanel('coding-panel');
-                        self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
-                        self.updateStats();
-                        
-                        // Force a redraw for browsers that might batch updates
-                        setTimeout(() => {
-                            // Update again after a small delay to ensure UI is refreshed
+                    
+                    try {
+                        // Check time blocks
+                        if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
+                            console.log("Time block deducted for Code Sprint - remaining:", self.gameState.getAvailableTimeBlocks());
+                            
+                            // Immediately update the time blocks counter in the UI
                             if (self.timeBlocks) {
                                 self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
                             }
-                        }, 50);
-                        
-                        // Check if all time blocks are used
-                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                            
+                            // Switch to the coding panel - the critical step
+                            try {
+                                // Use our more robust method to show the coding panel
+                                const success = self.ensureCodingPanelVisible();
+                                
+                                if (!success) {
+                                    console.error("Failed to show coding panel with ensureCodingPanelVisible");
+                                    
+                                    // Fallback to direct manipulation as a last resort
+                                    const codingPanel = document.getElementById('coding-panel');
+                                    if (codingPanel) {
+                                        // Hide all panels first
+                                        document.querySelectorAll('.panel, #main-menu').forEach(panel => {
+                                            panel.classList.add('hidden');
+                                            panel.style.display = 'none';
+                                        });
+                                        
+                                        // Show coding panel
+                                        codingPanel.classList.remove('hidden');
+                                        codingPanel.style.display = 'block';
+                                        console.log("Coding panel shown with fallback method");
+                                    } else {
+                                        console.error("CRITICAL ERROR: Coding panel not found even in fallback!");
+                                    }
+                                }
+                            } catch (error) {
+                                console.error("Error showing coding panel:", error);
+                                
+                                // Last resort fallback
+                                try {
+                                    self.switchPanel('coding-panel');
+                                } catch (e) {
+                                    console.error("Even switchPanel failed:", e);
+                                }
+                            }
+                            
+                            self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
+                            self.updateStats();
+                            
+                            // Force a redraw for browsers that might batch updates
+                            setTimeout(() => {
+                                // Update again after a small delay to ensure UI is refreshed
+                                if (self.timeBlocks) {
+                                    self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                                }
+                            }, 50);
+                            
+                            // Check if all time blocks are used
+                            if (self.gameState.getAvailableTimeBlocks() <= 0) {
+                                self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                            }
+                        } else {
+                            self.showNotification("Not enough time blocks left!", "error");
                         }
-                    } else {
-                        self.showNotification("Not enough time blocks left!", "error");
+                    } catch (error) {
+                        console.error("Error in code button handler:", error);
                     }
                 });
                 codeBtn._initialized = true;
@@ -1026,6 +1289,8 @@ export class UI {
             } else {
                 console.log("Code Sprint button already has event listener");
             }
+        } else {
+            console.error("Code Sprint button not found");
         }
         
         var emailBtn = document.getElementById('email-btn');
@@ -2453,55 +2718,91 @@ export class UI {
     initCodeSprintListeners() {
         console.log("Initializing Code Sprint listeners");
         
-        // Set up GPU toggle listener
-        const gpuToggle = document.getElementById('allocate-gpu-toggle');
-        if (gpuToggle) {
-            gpuToggle.addEventListener('change', () => {
-                // Update the GPU usage bar
-                const gpuBar = document.getElementById('gpu-usage-bar');
-                if (gpuBar) {
-                    if (gpuToggle.checked) {
-                        gpuBar.style.width = '100%';
-                        gpuBar.classList.add('active');
-                    } else {
-                        gpuBar.style.width = '0%';
-                        gpuBar.classList.remove('active');
+        try {
+            // Set up GPU toggle listener
+            const gpuToggle = document.getElementById('allocate-gpu-toggle');
+            if (gpuToggle) {
+                gpuToggle.addEventListener('change', () => {
+                    // Update the GPU usage bar
+                    const gpuBar = document.getElementById('gpu-usage-bar');
+                    if (gpuBar) {
+                        if (gpuToggle.checked) {
+                            gpuBar.style.width = '100%';
+                            gpuBar.classList.add('active');
+                        } else {
+                            gpuBar.style.width = '0%';
+                            gpuBar.classList.remove('active');
+                        }
                     }
-                }
-                
-                // Update success probability based on new GPU setting
-                this.updateSuccessProbability();
-            });
-        }
-        
-        // Set up Start Sprint button
-        const startSprintBtn = document.getElementById('start-sprint-btn');
-        if (startSprintBtn) {
-            startSprintBtn.addEventListener('click', () => this.startSprint());
-        }
-        
-        // Set up YOLO button
-        const yoloBtn = document.getElementById('yolo-btn');
-        if (yoloBtn) {
-            yoloBtn.addEventListener('click', () => this.handleYolo());
-        }
-        
-        // Set up Continue button
-        const continueBtn = document.getElementById('continue-btn');
-        if (continueBtn) {
-            continueBtn.addEventListener('click', () => {
-                // Hide sprint result
-                const sprintResult = document.getElementById('sprint-result');
-                if (sprintResult) {
-                    sprintResult.classList.add('hidden');
-                }
-                
-                // Show the sprint workspace again
-                this.showSprintWorkspace();
-                
-                // Reset timer display
-                this.updateTimerDisplay();
-            });
+                    
+                    // Update success probability based on new GPU setting
+                    if (typeof this.updateSuccessProbability === 'function') {
+                        this.updateSuccessProbability();
+                    } else {
+                        console.error("updateSuccessProbability is not a function");
+                    }
+                });
+            }
+            
+            // Set up Start Sprint button
+            const startSprintBtn = document.getElementById('start-sprint-btn');
+            if (startSprintBtn) {
+                startSprintBtn.addEventListener('click', () => {
+                    if (typeof this.startSprint === 'function') {
+                        this.startSprint();
+                    } else {
+                        console.error("startSprint is not a function");
+                    }
+                });
+            }
+            
+            // Set up YOLO button
+            const yoloBtn = document.getElementById('yolo-btn');
+            if (yoloBtn) {
+                yoloBtn.addEventListener('click', () => {
+                    if (typeof this.handleYolo === 'function') {
+                        this.handleYolo();
+                    } else {
+                        console.error("handleYolo is not a function");
+                    }
+                });
+            }
+            
+            // Set up Continue button
+            const continueBtn = document.getElementById('continue-btn');
+            if (continueBtn) {
+                continueBtn.addEventListener('click', () => {
+                    // Hide sprint result
+                    const sprintResult = document.getElementById('sprint-result');
+                    if (sprintResult) {
+                        sprintResult.classList.add('hidden');
+                    }
+                    
+                    // Show the sprint workspace again
+                    if (typeof this.showSprintWorkspace === 'function') {
+                        this.showSprintWorkspace();
+                    } else {
+                        console.error("showSprintWorkspace is not a function");
+                        
+                        // Fallback: show the workspace directly
+                        const sprintWorkspace = document.getElementById('sprint-workspace');
+                        if (sprintWorkspace) {
+                            sprintWorkspace.classList.remove('hidden');
+                        }
+                    }
+                    
+                    // Reset timer display
+                    if (typeof this.updateTimerDisplay === 'function') {
+                        this.updateTimerDisplay();
+                    } else {
+                        console.error("updateTimerDisplay is not a function");
+                    }
+                });
+            }
+            
+            console.log("Code Sprint listeners initialized successfully");
+        } catch (error) {
+            console.error("Error initializing Code Sprint listeners:", error);
         }
     }
 
@@ -2836,6 +3137,357 @@ export class UI {
             this.showNotification("YOLO! Skipping the timer...", "info");
         } catch (error) {
             console.error("Error handling YOLO click:", error);
+        }
+    }
+
+    // Remove any debug test elements that shouldn't be in production
+    removeDebugElements() {
+        console.log("Removing debug elements...");
+        
+        try {
+            // More safely identify and remove the test banner by its style and content
+            document.querySelectorAll('div').forEach(div => {
+                if (div.style && div.style.background && 
+                    div.style.background.includes('rgba(255, 0, 0') && 
+                    div.textContent && 
+                    div.textContent.includes('TEST SCRIPT SHOWING CODING PANEL')) {
+                    console.log("Removing test banner safely");
+                    div.remove();
+                }
+            });
+            
+            // Remove only the specific test button at the bottom left
+            document.querySelectorAll('button').forEach(btn => {
+                if (btn.textContent && 
+                    btn.textContent.includes('TEST: Show Code Sprint') && 
+                    btn.style && 
+                    btn.style.position === 'fixed' && 
+                    btn.style.bottom && 
+                    btn.style.left) {
+                    console.log("Removing test button safely");
+                    btn.remove();
+                }
+            });
+        } catch (error) {
+            console.error("Error removing debug elements:", error);
+        }
+    }
+
+    // Ensure coding panel is properly initialized and displayed
+    ensureCodingPanelVisible() {
+        console.log("Ensuring coding panel is visible and initialized...");
+        
+        try {
+            // First check if the computer screen is visible
+            if (this.computerScreen && this.computerScreen.classList.contains('hidden')) {
+                this.computerScreen.classList.remove('hidden');
+                this.computerScreen.style.display = 'block';
+                console.log("Computer screen made visible");
+            }
+            
+            // Get the coding panel
+            const codingPanel = document.getElementById('coding-panel');
+            if (!codingPanel) {
+                console.error("CRITICAL ERROR: Coding panel element not found in the document!");
+                return false;
+            }
+            
+            // Hide all panels
+            document.querySelectorAll('.panel, #main-menu').forEach(panel => {
+                panel.classList.add('hidden');
+                panel.style.display = 'none';
+            });
+            
+            // Show the coding panel
+            codingPanel.classList.remove('hidden');
+            codingPanel.style.display = 'block';
+            console.log("Coding panel display set to visible");
+            
+            // Update project selection and initialize listeners
+            if (typeof this.updateProjectSelection === 'function') {
+                console.log("Calling updateProjectSelection");
+                this.updateProjectSelection();
+            } else {
+                console.error("updateProjectSelection function not found!");
+            }
+            
+            if (typeof this.initCodeSprintListeners === 'function') {
+                console.log("Calling initCodeSprintListeners");
+                this.initCodeSprintListeners();
+            } else {
+                console.error("initCodeSprintListeners function not found!");
+            }
+            
+            return true;
+        } catch (error) {
+            console.error("Error ensuring coding panel is visible:", error);
+            return false;
+        }
+    }
+
+    // Debug method to show the coding panel directly (if debug buttons are still active)
+    debugShowCodingPanel() {
+        console.log("Debug method to show coding panel directly");
+        
+        try {
+            // Show computer screen
+            if (this.computerScreen) {
+                this.computerScreen.classList.remove('hidden');
+                this.computerScreen.style.display = 'block';
+            }
+            
+            // Hide all panels
+            document.querySelectorAll('.panel, #main-menu').forEach(panel => {
+                panel.classList.add('hidden');
+                panel.style.display = 'none';
+            });
+            
+            // Show coding panel 
+            const codingPanel = document.getElementById('coding-panel');
+            if (codingPanel) {
+                codingPanel.classList.remove('hidden');
+                codingPanel.style.display = 'block';
+                
+                // Try to initialize the panel properly
+                if (typeof this.updateProjectSelection === 'function') {
+                    this.updateProjectSelection();
+                }
+                
+                if (typeof this.initCodeSprintListeners === 'function') {
+                    this.initCodeSprintListeners();
+                }
+                
+                return true;
+            } else {
+                console.error("Coding panel not found in debug method");
+                return false;
+            }
+        } catch (error) {
+            console.error("Error in debug show coding panel:", error);
+            return false;
+        }
+    }
+
+    // Helper to show error results
+    showErrorResult(errorMessage) {
+        try {
+            // Hide the timer container
+            document.getElementById('sprint-timer-container')?.classList.add('hidden');
+            
+            // Show error in the sprint result
+            const sprintResult = document.getElementById('sprint-result');
+            if (sprintResult) {
+                sprintResult.classList.remove('hidden');
+                sprintResult.className = 'sprint-result failure';
+                sprintResult.innerHTML = `
+                    <div id="result-message" style="color: #ff3333;">Error Processing Sprint</div>
+                    <div id="result-details">
+                        <p>There was an error processing your sprint results:</p>
+                        <p><strong>${errorMessage || 'Unknown error'}</strong></p>
+                        <p>Please try again.</p>
+                    </div>
+                    <button id="continue-btn" class="action-button-large">Continue</button>
+                `;
+                
+                // Add event listener to the continue button
+                const continueBtn = document.getElementById('continue-btn');
+                if (continueBtn) {
+                    continueBtn.addEventListener('click', () => {
+                        sprintResult.classList.add('hidden');
+                        this.showSprintWorkspace();
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error showing error result:", error);
+        }
+    }
+
+    // Initialize test and debug buttons
+    initDebugTools() {
+        try {
+            console.log("Initializing debug tools...");
+            
+            // Initialize once the DOM is fully loaded
+            const setupDebugPanel = () => {
+                // Simple toggle for debug panel collapse
+                const debugCollapseBtn = document.getElementById('debug-collapse-btn');
+                const debugPanelContent = document.getElementById('debug-panel-content');
+                const debugPanelHeader = document.getElementById('debug-panel-header');
+                
+                if (!debugCollapseBtn || !debugPanelContent || !debugPanelHeader) {
+                    console.error("Missing debug panel elements:", {
+                        debugCollapseBtn: !!debugCollapseBtn, 
+                        debugPanelContent: !!debugPanelContent,
+                        debugPanelHeader: !!debugPanelHeader
+                    });
+                    return;
+                }
+                
+                // Function to toggle debug panel
+                const toggleDebugPanel = (event) => {
+                    // Prevent any parent handlers from being called
+                    if (event) {
+                        event.stopPropagation();
+                    }
+                    
+                    console.log("Toggle debug panel clicked");
+                    
+                    // Toggle collapsed class
+                    debugPanelContent.classList.toggle('collapsed');
+                    debugCollapseBtn.classList.toggle('collapsed');
+                    
+                    // Change arrow text based on state
+                    if (debugPanelContent.classList.contains('collapsed')) {
+                        debugCollapseBtn.textContent = '▲';
+                        console.log("Debug panel collapsed");
+                    } else {
+                        debugCollapseBtn.textContent = '▼';
+                        console.log("Debug panel expanded");
+                    }
+                };
+                
+                // Add click handlers
+                debugCollapseBtn.addEventListener('click', toggleDebugPanel);
+                console.log("Added click handler to debug collapse button");
+                
+                debugPanelHeader.addEventListener('click', (e) => {
+                    // Only toggle if clicking on the header itself or the h4, not child buttons
+                    if (e.target === debugPanelHeader || e.target.tagName === 'H4') {
+                        toggleDebugPanel(e);
+                    }
+                });
+                console.log("Added click handler to debug panel header");
+            };
+            
+            // Check if document is ready
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                setupDebugPanel();
+            } else {
+                document.addEventListener('DOMContentLoaded', setupDebugPanel);
+            }
+            
+            // Show Computer UI button
+            const debugShowComputer = document.getElementById('debug-show-computer');
+            if (debugShowComputer) {
+                debugShowComputer.addEventListener('click', () => {
+                    const computerScreen = document.getElementById('computer-screen');
+                    if (computerScreen) {
+                        computerScreen.classList.remove('hidden');
+                        computerScreen.style.display = 'block';
+                        console.log("Computer screen shown from debug panel");
+                    }
+                });
+            }
+            
+            // Toggle Test Panels button
+            const debugTogglePanels = document.getElementById('debug-toggle-panels');
+            if (debugTogglePanels) {
+                debugTogglePanels.addEventListener('click', () => {
+                    const testElements = document.querySelectorAll('.test-element');
+                    testElements.forEach(el => {
+                        el.classList.toggle('hidden');
+                    });
+                    console.log("Test panels toggled from debug panel");
+                });
+            }
+            
+            // Add Test Project button
+            const debugAddTestProject = document.getElementById('debug-add-test-project');
+            if (debugAddTestProject) {
+                debugAddTestProject.addEventListener('click', () => {
+                    if (this.projectManager) {
+                        const projectIndex = this.projectManager.addHighDifficultyProject();
+                        if (typeof projectIndex === 'number') {
+                            this.showNotification("Added high difficulty test project: QuantumAlgorithm", "info");
+                            this.updateProjectSelection();
+                            this.updateActiveProjectsList();
+                            
+                            // Also show computer and coding panel
+                            const computerScreen = document.getElementById('computer-screen');
+                            if (computerScreen) {
+                                computerScreen.classList.remove('hidden');
+                                computerScreen.style.display = 'block';
+                                
+                                // Show coding panel
+                                this.switchPanel('coding-panel');
+                                
+                                // Select the new project
+                                setTimeout(() => {
+                                    this.selectProject(projectIndex);
+                                }, 500);
+                            }
+                            
+                            console.log("Test project added successfully, index:", projectIndex);
+                        } else {
+                            console.error("Failed to add test project, invalid index returned");
+                            this.showNotification("Failed to add test project", "error");
+                        }
+                    } else {
+                        console.error("Project manager not available");
+                        this.showNotification("Project manager not available", "error");
+                    }
+                });
+            }
+            
+            // Fix Sprint Error button
+            const debugFixSprint = document.getElementById('debug-fix-sprint');
+            if (debugFixSprint) {
+                debugFixSprint.addEventListener('click', () => {
+                    // Reset any broken state that might be causing issues
+                    try {
+                        // Reset sprint timer
+                        this.stopSprintTimer();
+                        
+                        // Reset current sprint data with defaults
+                        if (typeof this._selectedProjectIndex === 'number') {
+                            this._currentSprintData = {
+                                projectIndex: this._selectedProjectIndex,
+                                aiModelKey: 'gpt-3',
+                                promptKey: 'basic-instruction',
+                                gpuAllocated: false,
+                                probability: 0.5
+                            };
+                        }
+                        
+                        // Ensure necessary elements are in the correct state
+                        const sprintWorkspace = document.getElementById('sprint-workspace');
+                        const sprintResult = document.getElementById('sprint-result');
+                        const startSprintBtn = document.getElementById('start-sprint-btn');
+                        const yoloBtn = document.getElementById('yolo-btn');
+                        
+                        if (sprintWorkspace) sprintWorkspace.classList.remove('hidden');
+                        if (sprintResult) sprintResult.classList.add('hidden');
+                        if (startSprintBtn) startSprintBtn.classList.remove('hidden');
+                        if (yoloBtn) yoloBtn.classList.add('hidden');
+                        
+                        this.showNotification("Sprint state reset. Try again.", "info");
+                        console.log("Sprint state reset by debug tool");
+                    } catch (error) {
+                        console.error("Error in sprint fix:", error);
+                    }
+                });
+            }
+            
+            // Testing Mode selector
+            const debugTestingMode = document.getElementById('debug-testing-mode');
+            if (debugTestingMode) {
+                debugTestingMode.addEventListener('change', () => {
+                    const mode = debugTestingMode.value;
+                    this._debugTestingMode = mode;
+                    console.log("Debug testing mode set to:", mode);
+                    this.showNotification(`Testing mode: ${mode}`, "info");
+                    
+                    // Update any probability calculations
+                    if (typeof this.updateSuccessProbability === 'function') {
+                        this.updateSuccessProbability();
+                    }
+                });
+            }
+            
+            console.log("Debug tools initialized successfully");
+        } catch (error) {
+            console.error("Error initializing debug tools:", error);
         }
     }
 } 

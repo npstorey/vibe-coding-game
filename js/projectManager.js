@@ -372,7 +372,6 @@ export class ProjectManager {
                     progress: project.progress,
                     progressGained: minorProgress,
                     successRate: successRate,
-                    message: 'Partial progress made, but sprint wasn\'t fully successful',
                     skillGain: {
                         coding: smallSkillGain,
                         prompt: smallSkillGain * 0.8
@@ -634,8 +633,14 @@ export class ProjectManager {
             };
         }
         
-        // Get hardware tier
-        const maxAITier = hardwareManager.getMaxAITier();
+        // Check if hardware manager is available and get hardware tier
+        let maxAITier = 1; // Default to tier 1 if no hardware manager
+        
+        // Safely access the hardware manager
+        if (typeof this.hardwareManager !== 'undefined' && this.hardwareManager) {
+            maxAITier = this.hardwareManager.getMaxAITier();
+        }
+        
         if (aiModel.tier > maxAITier) {
             return { 
                 success: false, 
@@ -651,8 +656,19 @@ export class ProjectManager {
         successRate += (aiModel.attributes.directionFollowing / 20); // Up to +40% from direction following
         successRate += (aiModel.attributes.reasoning / 25); // Up to +32% from reasoning
         
-        // Project difficulty reduces success rate
-        successRate -= (project.difficulty * 0.1); // -10% per difficulty level
+        // Project difficulty reduces success rate - more significant impact for high difficulty
+        if (project.difficulty >= 4) {
+            // High difficulty projects have much lower success rates
+            successRate -= (project.difficulty * 0.15); // -15% per difficulty level
+        } else {
+            successRate -= (project.difficulty * 0.1); // -10% per difficulty level
+        }
+        
+        // Special case for the "QuantumAlgorithm" high difficulty test project
+        if (project.name === "QuantumAlgorithm") {
+            // Force a very low success rate for testing
+            successRate = Math.min(successRate, 0.25); // Max 25% success rate
+        }
         
         // Add prompt technique bonus (use existing logic from updateProjectProgress)
         let promptBonus = 0;
@@ -755,122 +771,203 @@ export class ProjectManager {
     
     // Execute a coding sprint with the timer completed
     executeSprintWithTimer(projectIndex, aiModelKey, promptKey, hardwareManager, promptText = '') {
-        // First get the success probability calculation
-        const probabilityResult = this.calculateSuccessProbability(
-            projectIndex, 
-            aiModelKey, 
-            promptKey, 
-            hardwareManager.getGPUStatus().inUse
-        );
-        
-        if (!probabilityResult.success) {
-            return probabilityResult; // Return the error
-        }
-        
-        const project = this.gameState.activeProjects[projectIndex];
-        const successRate = probabilityResult.probability;
-        
-        // Determine if sprint is successful
-        const random = Math.random();
-        const isSuccess = random <= successRate;
-        
-        if (isSuccess) {
-            // Calculate progress amount based on synergy
-            // Base progress is 15%, can go up to 30% with good synergy
-            const progressAmount = 15 + Math.floor(successRate * 15);
-            
-            // Update project progress
-            project.progress += progressAmount;
-            project.workedOnToday = true;
-            
-            // Record this sprint
-            project.sprints.push({
-                day: this.gameState.day,
-                progress: progressAmount,
-                aiModel: aiModelKey,
-                prompt: promptKey,
-                promptText: promptText,
-                gpuUsed: hardwareManager.getGPUStatus().inUse,
-                timerUsed: true
-            });
-            
-            // Increment days taken counter if this is the first sprint today
-            if (project.sprints.filter(sprint => sprint.day === this.gameState.day).length === 1) {
-                project.daysTaken++;
+        try {
+            // Validate all input parameters
+            if (projectIndex === undefined || projectIndex === null) {
+                console.error("Invalid project index in executeSprintWithTimer:", projectIndex);
+                return {
+                    success: false,
+                    message: 'Invalid project selection',
+                    probability: 0
+                };
             }
             
-            // Increase skills based on project and AI model
-            const aiModel = this.aiModelManager.getModel(aiModelKey);
-            const skillGain = 0.1 * project.difficulty * (aiModel.tier / 2);
-            this.gameState.increaseSkill('coding', skillGain);
-            this.gameState.increaseSkill('prompt', skillGain * 0.8);
-            
-            // Check if project is completed
-            if (project.progress >= project.requiredProgress) {
-                return this.completeProject(projectIndex);
+            if (!aiModelKey) {
+                console.error("Missing AI model key in executeSprintWithTimer");
+                return {
+                    success: false,
+                    message: 'AI model not specified',
+                    probability: 0
+                };
             }
             
-            return {
-                success: true,
-                isSprintSuccess: true,
-                progress: project.progress,
-                progressGained: progressAmount,
-                successRate: successRate,
-                gpuUsed: hardwareManager.getGPUStatus().inUse,
-                gpuBonus: probabilityResult.gpuBonus,
-                skillGain: {
-                    coding: skillGain,
-                    prompt: skillGain * 0.8
-                },
-                reward: 0
-            };
-        } else {
-            // Failed sprint - small progress or none
-            const minorProgress = Math.random() < 0.3 ? Math.floor(5 + (successRate * 5)) : 0;
-            
-            if (minorProgress > 0) {
-                project.progress += minorProgress;
+            if (!promptKey) {
+                console.error("Missing prompt key in executeSprintWithTimer");
+                return {
+                    success: false,
+                    message: 'Prompt technique not specified',
+                    probability: 0
+                };
             }
             
-            project.workedOnToday = true;
-            
-            // Record this sprint
-            project.sprints.push({
-                day: this.gameState.day,
-                progress: minorProgress,
-                aiModel: aiModelKey,
-                prompt: promptKey,
-                promptText: promptText,
-                gpuUsed: hardwareManager.getGPUStatus().inUse,
-                success: false,
-                timerUsed: true
-            });
-            
-            // Increment days taken counter if this is the first sprint today
-            if (project.sprints.filter(sprint => sprint.day === this.gameState.day).length === 1) {
-                project.daysTaken++;
+            // Check if hardware manager is valid
+            if (!hardwareManager) {
+                console.error("Hardware manager not provided to executeSprintWithTimer");
+                return {
+                    success: false,
+                    message: 'Hardware configuration error',
+                    probability: 0
+                };
             }
             
-            // Skill gain is smaller for failed sprints
-            const aiModel = this.aiModelManager.getModel(aiModelKey);
-            const skillGain = 0.05 * project.difficulty * (aiModel.tier / 2);
-            this.gameState.increaseSkill('coding', skillGain);
-            this.gameState.increaseSkill('prompt', skillGain * 0.4);
+            // Check if project exists
+            if (!this.gameState.activeProjects || !this.gameState.activeProjects[projectIndex]) {
+                console.error("Project not found at index:", projectIndex);
+                return {
+                    success: false,
+                    message: 'Project not found',
+                    probability: 0
+                };
+            }
             
-            return {
-                success: true,
-                isSprintSuccess: false,
-                progress: project.progress,
-                progressGained: minorProgress,
-                message: minorProgress > 0 
-                    ? `Sprint partially successful with ${minorProgress}% progress.` 
-                    : 'Sprint failed, no progress made.',
-                successRate: successRate,
-                gpuUsed: hardwareManager.getGPUStatus().inUse,
-                skillGain: {
-                    coding: skillGain,
-                    prompt: skillGain * 0.4
+            // Store a reference to the hardware manager for later use
+            this.hardwareManager = hardwareManager;
+            
+            // First get the success probability calculation
+            const probabilityResult = this.calculateSuccessProbability(
+                projectIndex, 
+                aiModelKey, 
+                promptKey, 
+                hardwareManager.getGPUStatus().inUse
+            );
+            
+            if (!probabilityResult.success) {
+                return probabilityResult; // Return the error
+            }
+            
+            const project = this.gameState.activeProjects[projectIndex];
+            let successRate = probabilityResult.probability;
+            
+            // Check if a debug testing mode is set in the UI
+            let isSuccess = false;
+            if (this.ui && this.ui._debugTestingMode) {
+                switch (this.ui._debugTestingMode) {
+                    case 'always-success':
+                        console.log("Debug mode: Forcing success");
+                        isSuccess = true;
+                        break;
+                    case 'always-fail':
+                        console.log("Debug mode: Forcing failure");
+                        isSuccess = false;
+                        break;
+                    default:
+                        // Normal random calculation
+                        const random = Math.random();
+                        isSuccess = random <= successRate;
+                        console.log(`Sprint result (normal mode): random=${random.toFixed(2)}, successRate=${successRate.toFixed(2)}, isSuccess=${isSuccess}`);
                 }
+            } else {
+                // Normal behavior if no debug mode
+                const random = Math.random();
+                isSuccess = random <= successRate;
+                console.log(`Sprint result: random=${random.toFixed(2)}, successRate=${successRate.toFixed(2)}, isSuccess=${isSuccess}`);
+            }
+            
+            if (isSuccess) {
+                // Calculate progress amount based on synergy
+                // Base progress is 15%, can go up to 30% with good synergy
+                const progressAmount = 15 + Math.floor(successRate * 15);
+                
+                // Update project progress
+                project.progress += progressAmount;
+                project.workedOnToday = true;
+                
+                // Record this sprint
+                project.sprints.push({
+                    day: this.gameState.day,
+                    progress: progressAmount,
+                    aiModel: aiModelKey,
+                    prompt: promptKey,
+                    promptText: promptText,
+                    gpuUsed: hardwareManager.getGPUStatus().inUse,
+                    timerUsed: true
+                });
+                
+                // Increment days taken counter if this is the first sprint today
+                if (project.sprints.filter(sprint => sprint.day === this.gameState.day).length === 1) {
+                    project.daysTaken++;
+                }
+                
+                // Increase skills based on project and AI model
+                const aiModel = this.aiModelManager.getModel(aiModelKey);
+                const skillGain = 0.1 * project.difficulty * (aiModel.tier / 2);
+                this.gameState.increaseSkill('coding', skillGain);
+                this.gameState.increaseSkill('prompt', skillGain * 0.8);
+                
+                // Check if project is completed
+                if (project.progress >= project.requiredProgress) {
+                    return this.completeProject(projectIndex);
+                }
+                
+                return {
+                    success: true,
+                    isSprintSuccess: true,
+                    progress: project.progress,
+                    progressGained: progressAmount,
+                    successRate: successRate,
+                    gpuUsed: hardwareManager.getGPUStatus().inUse,
+                    gpuBonus: probabilityResult.gpuBonus,
+                    skillGain: {
+                        coding: skillGain,
+                        prompt: skillGain * 0.8
+                    },
+                    reward: 0
+                };
+            } else {
+                // Failed sprint - small progress or none
+                const minorProgress = Math.random() < 0.3 ? Math.floor(5 + (successRate * 5)) : 0;
+                
+                if (minorProgress > 0) {
+                    project.progress += minorProgress;
+                }
+                
+                project.workedOnToday = true;
+                
+                // Record this sprint
+                project.sprints.push({
+                    day: this.gameState.day,
+                    progress: minorProgress,
+                    aiModel: aiModelKey,
+                    prompt: promptKey,
+                    promptText: promptText,
+                    gpuUsed: hardwareManager.getGPUStatus().inUse,
+                    success: false,
+                    timerUsed: true
+                });
+                
+                // Increment days taken counter if this is the first sprint today
+                if (project.sprints.filter(sprint => sprint.day === this.gameState.day).length === 1) {
+                    project.daysTaken++;
+                }
+                
+                // Skill gain is smaller for failed sprints
+                const aiModel = this.aiModelManager.getModel(aiModelKey);
+                const skillGain = 0.05 * project.difficulty * (aiModel.tier / 2);
+                this.gameState.increaseSkill('coding', skillGain);
+                this.gameState.increaseSkill('prompt', skillGain * 0.4);
+                
+                return {
+                    success: true,
+                    isSprintSuccess: false,
+                    progress: project.progress,
+                    progressGained: minorProgress,
+                    message: minorProgress > 0 
+                        ? `Sprint partially successful with ${minorProgress}% progress.` 
+                        : 'Sprint failed, no progress made.',
+                    successRate: successRate,
+                    gpuUsed: hardwareManager.getGPUStatus().inUse,
+                    skillGain: {
+                        coding: skillGain,
+                        prompt: skillGain * 0.4
+                    }
+                };
+            }
+        } catch (error) {
+            console.error("Error in executeSprintWithTimer:", error);
+            return {
+                success: false,
+                message: 'An error occurred',
+                probability: 0
             };
         }
     }
@@ -911,5 +1008,43 @@ export class ProjectManager {
             daysTaken: project.daysTaken,
             gpuRequirement: 1 // All projects require at least 1 GPU for now
         };
+    }
+
+    // Create a high-difficulty project with low success probability for testing failures
+    createHighDifficultyProject() {
+        const project = {
+            name: "QuantumAlgorithm",
+            type: "b2b",
+            typeDisplayName: "B2B Software",
+            difficulty: 5, // Highest difficulty
+            description: "A challenging quantum computing algorithm for high-frequency trading. High risk, high reward.",
+            reward: 3000,
+            requiredProgress: 100,
+            progress: 0,
+            daysTaken: 0,
+            deadline: this.gameState.day + 10,
+            client: "QuantumFin Technologies",
+            sprints: [],
+            aiTier: 1,
+            completed: false,
+            workedOnToday: false
+        };
+        
+        console.log("Created high difficulty test project:", project);
+        return project;
+    }
+    
+    // Add the high difficulty project to the active projects
+    addHighDifficultyProject() {
+        const project = this.createHighDifficultyProject();
+        this.gameState.activeProjects.push(project);
+        console.log("Added high difficulty project to active projects");
+        return this.gameState.activeProjects.length - 1; // Return the index
+    }
+
+    // Set a reference to the UI for debug testing modes
+    setUI(ui) {
+        this.ui = ui;
+        console.log("UI reference set in ProjectManager");
     }
 } 

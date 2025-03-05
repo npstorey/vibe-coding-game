@@ -28,10 +28,10 @@
                 <div class="stat">Day: <span id="day-count">1</span></div>
                 <div class="stat">Time Blocks: <span id="time-blocks">8</span></div>
                 <div class="stat">Money: $<span id="money">1000</span></div>
-                <div class="stat">Coding Skill: <span id="coding-skill">1</span></div>
-                <div class="stat">Prompt Skill: <span id="prompt-skill">1</span></div>
-                <div class="stat gpu-stat">GPU: <span id="gpu-units">1</span> (<span id="gpu-status">Available</span>)</div>
-                <div class="stat health-stat">Health: <span id="health">100</span></div>
+                <div class="stat">Coding Skill: <span id="coding-skill">1.0</span></div>
+                <div class="stat">Prompt Skill: <span id="prompt-skill">1.0</span></div>
+                <div class="stat">GPU: <span id="gpu-count">1</span> (<span id="gpu-status">Available</span>)</div>
+                <div class="stat">Health: <span id="health">100</span></div>
                 
                 <!-- Essential Activities integrated into stats panel -->
                 <div class="essential-activities">
@@ -51,6 +51,12 @@
                         <span class="activity-icon">😴</span>
                         <span class="activity-name">Sleep</span>
                     </button>
+                </div>
+            </div>
+            
+            <div id="actions-panel">
+                <div class="button-group">
+                    <!-- Removed the Show Computer UI button -->
                 </div>
             </div>
             
@@ -379,9 +385,23 @@
             <div id="notification-container"></div>
             
             <!-- Debug Panel for Testing -->
-            <div id="debug-panel" style="position: fixed; top: 10px; right: 10px; z-index: 10000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
-                <button id="debug-show-computer" style="padding: 5px 10px; margin-bottom: 5px; width: 100%;">Show Computer UI</button>
-                <button id="debug-toggle-panels" style="padding: 5px 10px; width: 100%;">Toggle Test Panels</button>
+            <div id="debug-panel" style="position: fixed; top: 10px; right: 10px; z-index: 10000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; min-width: 200px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                <div id="debug-panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                    <h4 style="color: white; margin: 0; text-align: center; user-select: none;">Debug Tools</h4>
+                    <button id="debug-collapse-btn" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 0 5px; font-weight: bold;">▼</button>
+                </div>
+                <div id="debug-panel-content">
+                    <button id="debug-show-computer" style="padding: 5px 10px; margin-bottom: 5px; width: 100%;">Show Computer UI</button>
+                    <button id="debug-toggle-panels" style="padding: 5px 10px; margin-bottom: 5px; width: 100%;">Toggle Test Panels</button>
+                    <button id="debug-add-test-project" style="padding: 5px 10px; margin-bottom: 5px; width: 100%; background-color: #553399; color: white;">Add Test Project</button>
+                    <button id="debug-fix-sprint" style="padding: 5px 10px; margin-bottom: 5px; width: 100%; background-color: #cc3333; color: white;">Fix Sprint Error</button>
+                    <label style="color: white; display: block; margin-bottom: 5px; font-size: 12px;">Testing Mode:</label>
+                    <select id="debug-testing-mode" style="width: 100%; margin-bottom: 5px; padding: 5px;">
+                        <option value="normal">Normal</option>
+                        <option value="always-success">Always Success</option>
+                        <option value="always-fail">Always Fail</option>
+                    </select>
+                </div>
             </div>
         </div>
         
@@ -421,7 +441,55 @@
     <!-- Computer clickability fix script -->
     <script src="js/fix-computer.js"></script>
     
-    <!-- Debug script for Code Sprint button -->
-    <script src="debug/debug-clickability.js"></script>
+    <!-- Debug script for Code Sprint button (temporarily disabled) -->
+    <!-- <script src="debug/debug-clickability.js"></script> -->
+    
+    <!-- Test script for Code Sprint panel -->
+    <!-- <script src="debug/test-code-sprint.js"></script> -->
+
+    <script src="js/shopManager.js" type="module"></script>
+    <script src="js/resourceManager.js" type="module"></script>
+    <script src="js/game.js" type="module"></script>
+    
+    <!-- Direct Debug Panel Functionality -->
+    <script>
+    (function() {
+        // Direct script to ensure debug panel functionality works
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Debug panel direct script loaded");
+            
+            // Get debug panel elements
+            const debugCollapseBtn = document.getElementById('debug-collapse-btn');
+            const debugPanelContent = document.getElementById('debug-panel-content');
+            const debugPanelHeader = document.getElementById('debug-panel-header');
+            
+            if (debugCollapseBtn && debugPanelContent) {
+                // Toggle function
+                const togglePanel = function(event) {
+                    if (event) {
+                        event.stopPropagation();
+                    }
+                    debugPanelContent.classList.toggle('collapsed');
+                    debugCollapseBtn.classList.toggle('collapsed');
+                    debugCollapseBtn.textContent = debugPanelContent.classList.contains('collapsed') ? '▲' : '▼';
+                    console.log("Debug panel toggled via direct script");
+                };
+                
+                // Add click event listeners
+                debugCollapseBtn.addEventListener('click', togglePanel);
+                
+                if (debugPanelHeader) {
+                    debugPanelHeader.addEventListener('click', function(e) {
+                        if (e.target === debugPanelHeader || e.target.tagName === 'H4') {
+                            togglePanel(e);
+                        }
+                    });
+                }
+                
+                console.log("Debug panel direct script initialized successfully");
+            }
+        });
+    })();
+    </script>
 </body>
 </html> 

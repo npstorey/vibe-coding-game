@@ -1817,26 +1817,6 @@ class Game {
             this.testPanel.appendChild(button);
         });
         
-        // Log toggle button
-        const toggleLogsBtn = document.createElement('button');
-        toggleLogsBtn.innerText = 'Toggle Test Panel';
-        toggleLogsBtn.style.position = 'fixed';
-        toggleLogsBtn.style.bottom = '10px';
-        toggleLogsBtn.style.right = '10px';
-        toggleLogsBtn.style.backgroundColor = '#444';
-        toggleLogsBtn.style.color = 'white';
-        toggleLogsBtn.style.border = 'none';
-        toggleLogsBtn.style.borderRadius = '3px';
-        toggleLogsBtn.style.padding = '5px 10px';
-        toggleLogsBtn.style.zIndex = '9999';
-        toggleLogsBtn.style.cursor = 'pointer';
-        
-        toggleLogsBtn.addEventListener('click', () => {
-            this.testPanel.style.display = this.testPanel.style.display === 'none' ? 'block' : 'none';
-        });
-        
-        document.body.appendChild(toggleLogsBtn);
-        
         // Schedule periodic updates to the debug info
         setInterval(() => {
             if (this.debugOverlay.style.display !== 'none') {
