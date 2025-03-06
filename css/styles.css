@@ -147,7 +147,7 @@ button:hover {
     --card-bg: #1a2c45;
 }
 
-/* Computer screen main container */
+/* Computer screen - properly overlay without replacing the scene */
 #computer-screen {
     pointer-events: auto;
     background: linear-gradient(135deg, var(--primary-bg), #121b29, var(--secondary-bg));
@@ -155,13 +155,13 @@ button:hover {
     border-radius: 12px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(54, 181, 255, 0.2);
     overflow: hidden;
-    position: fixed;
+    position: fixed; /* Fixed position to overlay on top */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 80%;
     height: 85%;
-    z-index: 100;
+    z-index: 500; /* Ensure it's above everything else */
     padding: 0;
     animation: bootUp 0.5s ease-out;
     backdrop-filter: blur(5px);

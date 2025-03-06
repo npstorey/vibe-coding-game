@@ -668,104 +668,24 @@ class Game {
             console.log(`Computer object in interactive objects: ${hasComputer}`);
             
             // Re-add the computer if it exists in the scene but not in interactiveObjects
-            if (!hasComputer && this.computer) {
-                console.log("Computer found in scene but not in interactive objects - re-adding it");
+            if (this.computer && !hasComputer) {
+                console.log("Adding computer to interactive objects array");
                 this.makeInteractive(this.computer, 'computer');
             }
             
-            // Verify computer is properly set up
-            if (this.computer) {
-                // Ensure the computer has the correct userData
-                if (!this.computer.userData) {
-                    this.computer.userData = {};
-                }
-                
-                // Set interactive properties directly - using BOTH old and new property names for compatibility
-                this.computer.userData.isInteractive = true;
-                this.computer.userData.objectType = 'computer';
-                this.computer.userData.type = 'computer'; // For backward compatibility
-                
-                // Add the computer to the scene
-                this.scene.add(this.computer);
-                
-                // Store in interactiveObjects array explicitly
-                if (!this.interactiveObjects) {
-                    this.interactiveObjects = [];
-                }
-                
-                if (!this.interactiveObjects.includes(this.computer)) {
-                    this.interactiveObjects.push(this.computer);
-                    console.log("Computer added to interactive objects array directly");
-                }
-            } else {
-                console.warn("Computer object not found in scene");
-            }
-            
-            // Add event listeners for mouse interaction
+            // Setup mouse move for tracking hover effects
             document.addEventListener('mousemove', (event) => {
-                // Calculate mouse position in normalized device coordinates
                 this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
                 this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             });
             
-            // Direct canvas click handling to avoid event propagation issues
+            // Get references to key elements
             const canvas = this.renderer.domElement;
-            canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+            const sceneContainer = document.getElementById('scene-container');
             
-            // Add backup event listener on document for safety
-            document.addEventListener('click', (event) => {
-                console.log("Document click detected, checking for intersections with interactive objects");
-                
-                // Ensure raycaster, camera and interactiveObjects all exist
-                if (!this.raycaster || !this.camera) {
-                    console.warn("Raycaster or camera not initialized for click detection");
-                    return;
-                }
-                
-                if (!this.interactiveObjects || this.interactiveObjects.length === 0) {
-                    console.warn("No interactive objects available for intersection testing");
-                    return;
-                }
-                
-                // Check for intersections with interactive objects
-                try {
-                    this.raycaster.setFromCamera(this.mouse, this.camera);
-                    
-                    console.log(`Checking ${this.interactiveObjects.length} interactive objects for intersection`);
-                    const intersects = this.raycaster.intersectObjects(this.interactiveObjects, true);
-                    
-                    if (intersects.length > 0) {
-                        console.log("Intersection found:", intersects[0]);
-                        // Find the clicked object and its userData
-                        let clickedObject = intersects[0].object;
-                        
-                        // Traverse up the parent chain until we find an interactive object
-                        while (clickedObject && !clickedObject.userData?.isInteractive) {
-                            clickedObject = clickedObject.parent;
-                        }
-                        
-                        if (clickedObject && clickedObject.userData && clickedObject.userData.isInteractive) {
-                            // Handle the interactive object click
-                            const objectType = clickedObject.userData.objectType || clickedObject.userData.type;
-                            console.log(`Clicked on interactive object of type: ${objectType}`);
-                            this.handleObjectClick(objectType);
-                        } else {
-                            console.log("Intersection was not with an interactive object");
-                        }
-                    } else {
-                        console.log("No intersections found");
-                    }
-                } catch (error) {
-                    // Log detailed error information for debugging
-                    console.error("Error during raycasting:", error);
-                    console.error("Raycaster state:", {
-                        raycasterExists: !!this.raycaster,
-                        mousePosition: this.mouse,
-                        cameraExists: !!this.camera,
-                        interactiveObjectsCount: this.interactiveObjects?.length || 0
-                    });
-                }
-            });
+            // CRITICAL: Apply a direct patch to intercept ALL clicks on the scene container
+            // This completely bypasses the normal flow and ensures the scene is never accidentally hidden
+            this.applySceneClickPatch(sceneContainer, canvas);
             
             console.log("Interactivity setup complete");
         } catch (error) {
@@ -773,9 +693,153 @@ class Game {
         }
     }
     
+    // Apply a direct patch to intercept all clicks in the scene container
+    applySceneClickPatch(sceneContainer, canvas) {
+        if (!sceneContainer || !canvas) {
+            console.error("Cannot apply scene click patch - missing elements");
+            return;
+        }
+        
+        console.log("APPLYING CRITICAL SCENE CLICK PATCH");
+        
+        // Store original addEventListener method
+        const originalAddEventListener = sceneContainer.addEventListener;
+        
+        // Override the addEventListener method to intercept any attempts to add click handlers
+        sceneContainer.addEventListener = function(type, listener, options) {
+            if (type === 'click') {
+                console.log("Intercepted attempt to add click handler to scene container");
+                
+                // Wrap the listener to ensure scene visibility is maintained
+                const wrappedListener = function(event) {
+                    // Ensure scene container stays visible
+                    sceneContainer.style.display = 'block';
+                    sceneContainer.style.visibility = 'visible';
+                    sceneContainer.style.opacity = '1';
+                    sceneContainer.classList.remove('hidden');
+                    
+                    // Call the original listener
+                    listener.call(this, event);
+                };
+                
+                // Call the original addEventListener with our wrapped listener
+                return originalAddEventListener.call(this, type, wrappedListener, options);
+            }
+            
+            // For non-click events, use the original method
+            return originalAddEventListener.call(this, type, listener, options);
+        };
+        
+        // Add our own direct click handler to the scene container
+        originalAddEventListener.call(sceneContainer, 'click', (event) => {
+            // Log the click
+            console.log("Scene container click detected - ensuring scene stays visible");
+            
+            // Stop event propagation to prevent document handlers from processing
+            event.stopPropagation();
+            
+            // Always ensure the scene container is visible
+            sceneContainer.style.display = 'block';
+            sceneContainer.style.visibility = 'visible';
+            sceneContainer.style.opacity = '1';
+            sceneContainer.classList.remove('hidden');
+            
+            // If the click is on the canvas, handle it through our canvas handler
+            if (event.target === canvas || canvas.contains(event.target)) {
+                console.log("Click is on canvas - delegating to canvas handler");
+                this.handleCanvasClick(event);
+                return;
+            }
+            
+            // Otherwise, it's a click in the scene container but not on the canvas
+            console.log("Click in scene container outside canvas");
+            
+            // Force a render to refresh the scene
+            if (this.renderer && this.scene && this.camera) {
+                this.renderer.render(this.scene, this.camera);
+            }
+        }, true); // Use capture phase to get events before other handlers
+        
+        // Add a specialized click handler directly to the canvas
+        canvas.addEventListener('click', (event) => {
+            // Stop propagation immediately
+            event.stopPropagation();
+            
+            console.log("Direct canvas click detected");
+            
+            // Always ensure the scene container is visible
+            sceneContainer.style.display = 'block';
+            sceneContainer.style.visibility = 'visible';
+            sceneContainer.style.opacity = '1';
+            sceneContainer.classList.remove('hidden');
+            
+            // Process the canvas click through our handler
+            this.handleCanvasClick(event);
+        }, true); // Use capture phase to get events before other handlers
+        
+        // Override any attempts to hide the scene container with a MutationObserver
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && 
+                    (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                    
+                    // Check if the scene container is hidden
+                    const computedStyle = window.getComputedStyle(sceneContainer);
+                    if (computedStyle.display === 'none' || 
+                        computedStyle.visibility === 'hidden' || 
+                        parseFloat(computedStyle.opacity) === 0 ||
+                        sceneContainer.classList.contains('hidden')) {
+                        
+                        // Check if the computer screen is visible
+                        const computerScreen = document.getElementById('computer-screen');
+                        const isComputerVisible = computerScreen && 
+                            !computerScreen.classList.contains('hidden') && 
+                            computerScreen.style.display !== 'none';
+                        
+                        console.log(`Scene container hidden detected (computer visible: ${isComputerVisible})`);
+                        
+                        // If the computer screen is not visible, force the scene to be visible
+                        if (!isComputerVisible) {
+                            console.log("CRITICAL: Forcing scene container to remain visible");
+                            sceneContainer.style.display = 'block';
+                            sceneContainer.style.visibility = 'visible';
+                            sceneContainer.style.opacity = '1';
+                            sceneContainer.classList.remove('hidden');
+                            
+                            // Force a render to refresh the scene
+                            if (this.renderer && this.scene && this.camera) {
+                                this.renderer.render(this.scene, this.camera);
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Start observing mutations to the scene container
+        observer.observe(sceneContainer, {
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+        
+        console.log("Scene click patch applied successfully");
+    }
+    
     // Direct canvas click handler for better raycasting reliability
     handleCanvasClick(event) {
         console.log("Canvas click detected - Direct raycasting");
+        
+        // Stop propagation to prevent document handler from also processing this click
+        event.stopPropagation();
+        
+        // CRITICAL: Ensure scene container remains visible after this click
+        const sceneContainer = document.getElementById('scene-container');
+        if (sceneContainer) {
+            sceneContainer.style.display = 'block';
+            sceneContainer.style.visibility = 'visible';
+            sceneContainer.style.opacity = '1';
+            sceneContainer.classList.remove('hidden');
+        }
         
         // Ensure we have all required components
         if (!this.camera || !this.raycaster) {
@@ -794,6 +858,10 @@ class Game {
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
             
             console.log(`Mouse position: (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
+            
+            // Store the mouse position for other functions that might need it
+            this.mouse.x = mouse.x;
+            this.mouse.y = mouse.y;
             
             // Set up the raycaster
             this.raycaster.setFromCamera(mouse, this.camera);
@@ -827,6 +895,11 @@ class Game {
             const intersects = this.raycaster.intersectObjects(this.interactiveObjects, true);
             console.log(`Found ${intersects.length} intersections with interactive objects`);
             
+            // Ensure the scene stays visible and render a frame to keep it alive
+            if (this.renderer && this.scene && this.camera) {
+                this.renderer.render(this.scene, this.camera);
+            }
+            
             if (intersects.length > 0) {
                 console.log("Click detection succeeded!");
                 
@@ -854,7 +927,7 @@ class Game {
                 if (objectType === 'computer' || 
                     (clickedObject.userData && clickedObject.userData.isComputerPart)) {
                     console.log("Computer clicked!");
-                    this.handleObjectClick('computer');
+                    this.handleDirectObjectClick('computer', intersects[0]);
                     return;
                 } else if (objectType) {
                     console.log(`Clicked on object type: ${objectType}`);
@@ -867,6 +940,14 @@ class Game {
             
         } catch (err) {
             console.error("Error in handleCanvasClick:", err);
+        }
+        
+        // CRITICAL: Final check to ensure scene is still visible after processing
+        if (sceneContainer) {
+            sceneContainer.style.display = 'block';
+            sceneContainer.style.visibility = 'visible';
+            sceneContainer.style.opacity = '1';
+            sceneContainer.classList.remove('hidden');
         }
     }
     
@@ -944,7 +1025,7 @@ class Game {
                 console.log("COMPUTER CLICKED - Opening computer screen interface");
                 const computerScreen = document.getElementById('computer-screen');
                 if (computerScreen) {
-                    // Show the screen with animation
+                    // Show the screen properly on top of the 3D scene
                     computerScreen.classList.remove('hidden');
                     computerScreen.style.display = 'block';
                     
@@ -1045,6 +1126,10 @@ class Game {
                         visibility: sceneContainer.style.visibility,
                         className: sceneContainer.className
                     });
+                    
+                    // Store current state before showing computer screen
+                    sceneContainer.dataset.prevDisplay = sceneContainer.style.display || 'block';
+                    sceneContainer.dataset.prevVisibility = sceneContainer.style.visibility || 'visible';
                     
                     // Make sure scene container stays visible
                     sceneContainer.style.display = 'block';
@@ -1252,38 +1337,42 @@ class Game {
                 closeBtn.addEventListener('click', (e) => {
                     console.log("Close button clicked");
                     
-                    // Check scene container state before changing anything
-                    const sceneContainer = document.getElementById('scene-container');
-                    if (sceneContainer) {
-                        console.log("Scene container before closing computer:", {
-                            display: sceneContainer.style.display,
-                            visibility: sceneContainer.style.visibility,
-                            className: sceneContainer.className
-                        });
-                    }
+                    // Stop event propagation immediately
+                    e.stopPropagation();
+                    e.preventDefault();
                     
+                    // Get the scene container first, before any other DOM changes
+                    const sceneContainer = document.getElementById('scene-container');
+                    
+                    // Simply hide the computer screen
                     const computerScreen = document.getElementById('computer-screen');
                     if (computerScreen) {
                         computerScreen.classList.add('hidden');
                         computerScreen.style.display = 'none';
+                    }
+                    
+                    // CRITICAL: Force the scene container to be visible with all necessary styles
+                    if (sceneContainer) {
+                        console.log("CRITICAL: Ensuring 3D scene stays visible after computer close");
                         
-                        // Ensure the scene container is still visible when closing the computer
-                        if (sceneContainer) {
-                            sceneContainer.style.display = 'block';
-                            sceneContainer.style.visibility = 'visible';
-                            sceneContainer.classList.remove('hidden');
-                            console.log("Ensuring scene container remains visible after closing computer");
+                        // Apply multiple methods to ensure visibility
+                        sceneContainer.style.display = 'block';
+                        sceneContainer.style.visibility = 'visible';
+                        sceneContainer.style.opacity = '1';
+                        sceneContainer.classList.remove('hidden');
+                        
+                        // Force a render to ensure the scene is shown
+                        if (this.renderer && this.scene && this.camera) {
+                            this.renderer.render(this.scene, this.camera);
                             
-                            // Log the state after changes
-                            console.log("Scene container after fixing:", {
-                                display: sceneContainer.style.display,
-                                visibility: sceneContainer.style.visibility,
-                                className: sceneContainer.className
-                            });
-                            
-                            // Force a reflow
-                            void sceneContainer.offsetHeight;
+                            // If animation loop is not running, start it
+                            if (!this.animating) {
+                                this.animate();
+                            }
                         }
+                        
+                        // Add the temporary scene protection
+                        this.addTemporarySceneClickProtection();
                     }
                 });
             }
@@ -1353,140 +1442,165 @@ class Game {
                 });
             });
             
-            // Add a direct method to handle panel content updates as fallback
-            if (!this.updatePanelContent) {
-                this.updatePanelContent = function(panelName) {
-                    try {
-                        console.log(`Updating panel content for: ${panelName}`);
-                        
-                        // Basic implementations for essential panels
-                        switch (panelName) {
-                            case 'email':
-                                // Update email list if handler exists
-                                if (this.ui && typeof this.ui.updateEmailList === 'function') {
-                                    this.ui.updateEmailList();
-                                }
-                                break;
-                                
-                            case 'code':
-                            case 'coding':
-                                // Update project and AI model selection if handlers exist
-                                if (this.ui) {
-                                    if (typeof this.ui.updateProjectSelection === 'function') {
-                                        this.ui.updateProjectSelection();
-                                    }
-                                    if (typeof this.ui.updateAIModelSelection === 'function') {
-                                        this.ui.updateAIModelSelection();
-                                    }
-                                }
-                                break;
-                                
-                            case 'resources':
-                                // Update resources display if manager exists
-                                if (this.resourceManager && typeof this.resourceManager.updateResourcesDisplay === 'function') {
-                                    this.resourceManager.updateResourcesDisplay();
-                                }
-                                break;
-                        }
-                    } catch (error) {
-                        console.error(`Error updating panel content for ${panelName}:`, error);
-                    }
-                };
-            }
-            
-            // Add submit prompt button handler
-            const submitPromptBtn = document.getElementById('submit-prompt-btn');
-            if (submitPromptBtn) {
-                console.log("Setting up submit prompt button listener");
-                submitPromptBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Call UI's handlePromptSubmission method if available
-                    if (this.ui && typeof this.ui.handlePromptSubmission === 'function') {
-                        console.log("Calling UI.handlePromptSubmission");
-                        this.ui.handlePromptSubmission(e);
-                    } else {
-                        console.error("UI.handlePromptSubmission method not available");
+            // Add actions for mobile drawer toggle
+            const mobileDrawerToggle = document.querySelector('.mobile-drawer-toggle');
+            if (mobileDrawerToggle) {
+                mobileDrawerToggle.addEventListener('click', () => {
+                    const drawer = document.querySelector('.mobile-drawer');
+                    if (drawer) {
+                        drawer.classList.toggle('open');
                     }
                 });
             }
             
-            // Add debug button handlers
-            const debugShowComputer = document.getElementById('debug-show-computer');
-            if (debugShowComputer) {
-                console.log("Setting up debug show computer button");
-                debugShowComputer.addEventListener('click', () => {
-                    console.log("Debug: Showing computer UI");
-                    this.handleObjectClick('computer');
-                });
-            }
-            
-            // Add hidden test panel
-            const testPanel = document.createElement('div');
-            testPanel.id = 'test-panel';
-            testPanel.style.position = 'fixed';
-            testPanel.style.top = '50px';
-            testPanel.style.right = '10px';
-            testPanel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            testPanel.style.padding = '10px';
-            testPanel.style.borderRadius = '5px';
-            testPanel.style.zIndex = '9998';
-            testPanel.style.display = 'none';
-            
-            // Add test buttons for each panel
-            const panels = ['email', 'coding', 'social', 'shop', 'resources'];
-            panels.forEach(panel => {
-                const button = document.createElement('button');
-                button.textContent = `Show ${panel} panel`;
-                button.style.display = 'block';
-                button.style.width = '100%';
-                button.style.marginBottom = '5px';
-                button.style.padding = '5px';
-                button.addEventListener('click', () => {
-                    if (this.ui && typeof this.ui.switchPanel === 'function') {
-                        console.log(`Debug: Switching to ${panel} panel`);
-                        this.ui.switchPanel(panel);
-                    } else {
-                        console.warn(`UI.switchPanel not available for ${panel}`);
-                    }
-                });
-                testPanel.appendChild(button);
-            });
-            
-            // Add End Day button
-            const endDayButton = document.createElement('button');
-            endDayButton.textContent = 'End Day';
-            endDayButton.style.display = 'block';
-            endDayButton.style.width = '100%';
-            endDayButton.style.marginBottom = '5px';
-            endDayButton.style.padding = '5px';
-            endDayButton.addEventListener('click', () => {
-                if (this.ui && typeof this.ui.handleEndDay === 'function') {
-                    console.log("Debug: Ending day");
-                    this.ui.handleEndDay();
-                } else {
-                    console.warn("UI.handleEndDay not available");
-                }
-            });
-            testPanel.appendChild(endDayButton);
-            
-            document.body.appendChild(testPanel);
-            
-            // Set up toggle button
-            const debugTogglePanels = document.getElementById('debug-toggle-panels');
-            if (debugTogglePanels) {
-                console.log("Setting up debug toggle panels button");
-                debugTogglePanels.addEventListener('click', () => {
-                    console.log("Debug: Toggling test panels");
-                    testPanel.style.display = testPanel.style.display === 'none' ? 'block' : 'none';
-                });
-            }
+            // Add a MutationObserver to ensure the 3D scene is always visible
+            this.setupSceneVisibilityObserver();
             
             console.log("UI initialization completed");
         } catch (error) {
-            console.error("Error in initializeUI:", error);
+            console.error("Error initializing UI:", error);
         }
+    }
+
+    // Add a temporary protection to prevent clicking in the scene from being misinterpreted
+    addTemporarySceneClickProtection() {
+        const sceneContainer = document.getElementById('scene-container');
+        if (!sceneContainer) return;
+        
+        console.log("Adding ULTRA protection for scene container");
+        
+        // Remove any existing protection first
+        const existingProtection = document.getElementById('scene-click-protection');
+        if (existingProtection) {
+            existingProtection.remove();
+        }
+        
+        // Create a transparent overlay div that will catch all clicks
+        const protectionOverlay = document.createElement('div');
+        protectionOverlay.id = 'scene-click-protection';
+        protectionOverlay.style.position = 'absolute';
+        protectionOverlay.style.top = '0';
+        protectionOverlay.style.left = '0';
+        protectionOverlay.style.width = '100%';
+        protectionOverlay.style.height = '100%';
+        protectionOverlay.style.zIndex = '50';
+        protectionOverlay.style.backgroundColor = 'transparent';
+        protectionOverlay.style.pointerEvents = 'auto';
+        
+        // Create a backup safety flag in case the overlay is removed prematurely
+        window._sceneProtectionActive = true;
+        
+        // Add a click handler that prevents misinterpretation and removes itself
+        protectionOverlay.addEventListener('click', (e) => {
+            console.log("ULTRA PROTECTION ACTIVATED - Scene click protection caught click");
+            e.stopPropagation();
+            e.preventDefault();
+            
+            // CRITICAL: Before anything else, block any DOM manipulations for a tiny moment
+            // This prevents any race conditions where another handler might try to hide the scene
+            const originalAddEventListener = document.addEventListener;
+            document.addEventListener = function(type, listener, options) {
+                console.log(`Blocking event listener addition during protection: ${type}`);
+                // Just log and swallow the request during the protection period
+                return;
+            };
+            
+            // CRITICAL: Force scene to be fully visible with multiple approaches
+            sceneContainer.style.display = 'block !important';
+            sceneContainer.style.visibility = 'visible !important';
+            sceneContainer.style.opacity = '1 !important';
+            sceneContainer.classList.remove('hidden');
+            
+            // Apply inline !important styles to override any CSS
+            sceneContainer.setAttribute('style', 
+                'display: block !important; ' +
+                'visibility: visible !important; ' +
+                'opacity: 1 !important; ' +
+                'z-index: 1 !important;');
+            
+            // Force a render to make the scene visible again
+            if (this.renderer && this.scene && this.camera) {
+                this.renderer.render(this.scene, this.camera);
+                
+                // Ensure animations continue
+                if (!this.animating) {
+                    this.animate();
+                }
+            }
+            
+            // Add a style element to ensure scene container is always visible
+            const styleEl = document.createElement('style');
+            styleEl.id = 'scene-protection-styles';
+            styleEl.innerHTML = `
+                #scene-container {
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    z-index: 1 !important;
+                }
+            `;
+            document.head.appendChild(styleEl);
+            
+            // Remove the protection overlay after handling the click
+            protectionOverlay.remove();
+            
+            // Restore the original addEventListener after a small delay
+            setTimeout(() => {
+                document.addEventListener = originalAddEventListener;
+                console.log("Restored event listener functionality");
+            }, 100);
+            
+            // Set a flag to restore scene visibility in the next few frames
+            let frames = 5;
+            const ensureVisibleInterval = setInterval(() => {
+                if (frames <= 0) {
+                    clearInterval(ensureVisibleInterval);
+                    
+                    // After ensuring visibility, remove the protection styles
+                    const protectionStyles = document.getElementById('scene-protection-styles');
+                    if (protectionStyles) {
+                        protectionStyles.remove();
+                    }
+                    
+                    // Clear the protection flag
+                    window._sceneProtectionActive = false;
+                    return;
+                }
+                
+                // Force scene visibility on each frame
+                sceneContainer.style.display = 'block';
+                sceneContainer.style.visibility = 'visible';
+                sceneContainer.style.opacity = '1';
+                
+                // Force a render
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+                
+                frames--;
+            }, 100);
+        });
+        
+        // Add overlay to scene container
+        sceneContainer.appendChild(protectionOverlay);
+        
+        // Automatically remove overlay after a short delay even if not clicked
+        setTimeout(() => {
+            const protection = document.getElementById('scene-click-protection');
+            if (protection) {
+                protection.remove();
+                console.log("Scene ultra protection automatically removed after timeout");
+            }
+            
+            // Clear the protection flag
+            window._sceneProtectionActive = false;
+            
+            // Remove any protection styles
+            const protectionStyles = document.getElementById('scene-protection-styles');
+            if (protectionStyles) {
+                protectionStyles.remove();
+            }
+        }, 1000);
     }
 
     // Add debugging function to verify computer interactivity
