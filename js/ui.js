@@ -82,20 +82,29 @@ export class UI {
     
     // Initialize event listeners 
     initEvents(projectManager, socialMediaManager, hardwareManager, shopManager, resourceManager) {
-        console.log("Initializing UI events with managers:", {
+        const eventInit = {
             projectManager: !!projectManager,
             socialMediaManager: !!socialMediaManager,
             hardwareManager: !!hardwareManager,
             shopManager: !!shopManager,
             resourceManager: !!resourceManager
-        });
+        };
         
-        // Store manager references
         this.projectManager = projectManager;
         this.socialMediaManager = socialMediaManager;
         this.hardwareManager = hardwareManager;
         this.shopManager = shopManager;
         this.resourceManager = resourceManager;
+        
+        // Initialize the shop if available
+        if (eventInit.shopManager) {
+            this.initializeShop();
+        }
+        
+        // Initialize resources panel
+        this.initializeResourcesPanel();
+        
+        console.log("Initializing UI events with managers:", eventInit);
         
         // Apply our comprehensive fix for the Code Sprint button
         // We do this here to ensure it's fixed when events are initialized
@@ -1351,8 +1360,30 @@ export class UI {
                         event.preventDefault();
                         event.stopPropagation();
                         
-                        if (typeof self.switchPanel === 'function') {
-                            self.switchPanel('shop-panel');
+                        // Check if we can consume a time block before opening the shop
+                        if (self.gameState && 
+                            typeof self.gameState.useTimeBlock === 'function' && 
+                            self.gameState.useTimeBlock(1)) {
+                            
+                            // Add to the day's events
+                            if (self.gameState.todayEvents) {
+                                self.gameState.todayEvents.push({
+                                    type: 'activity',
+                                    name: 'Shop',
+                                    description: 'Spent time browsing the shop'
+                                });
+                            }
+                            
+                            if (typeof self.switchPanel === 'function') {
+                                self.switchPanel('shop-panel');
+                            }
+                        } else {
+                            // Not enough time blocks
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification('Not enough Time Blocks left today!', 'error');
+                            } else {
+                                console.error('Not enough Time Blocks left today!');
+                            }
                         }
                     });
                 }
@@ -2580,30 +2611,50 @@ export class UI {
     }
     
     // Show notification
-    showNotification(message, type, duration) {
-        if (!type) type = 'info';
-        if (!duration) duration = 5000;
+    showNotification(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
         
-        console.log("Showing notification: " + message);
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
         
-        var notification = document.createElement('div');
-        notification.className = "notification " + type;
-        notification.textContent = message;
+        // Add icon based on type
+        let icon = '💬';
+        if (type === 'success') icon = '✅';
+        if (type === 'error') icon = '❌';
+        if (type === 'warning') icon = '⚠️';
         
-        var container = document.getElementById('notification-container');
-        if (container) {
-            container.appendChild(notification);
+        notification.innerHTML = `
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-message">${message}</div>
+        `;
+        
+        // Add emphasis for "not enough money" messages
+        if (message.toLowerCase().includes('not enough money') || 
+            message.toLowerCase().includes('insufficient funds')) {
+            notification.classList.add('emphasis');
+            duration = 4000; // Show these messages a bit longer
             
-            var self = this;
-            setTimeout(function() {
-                notification.classList.add('hiding');
-                setTimeout(function() {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
-            }, duration);
+            // Add a small wiggle animation
+            notification.style.animation = 'notificationWiggle 0.5s ease-in-out';
         }
+        
+        // Add to container
+        container.appendChild(notification);
+        
+        // Fade in
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 10);
+        
+        // Remove after duration
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                container.removeChild(notification);
+            }, 300);
+        }, duration);
     }
     
     // Add coding result to the coding panel
@@ -3934,6 +3985,890 @@ export class UI {
             }
             
             return false;
+        }
+    }
+
+    // Initialize the shop panel with items from managers
+    initializeShop() {
+        console.log("Initializing shop panel");
+        // Check all required dependencies
+        if (!this.shopManager) {
+            console.warn("Shop initialization failed: shopManager not available");
+            return;
+        }
+        
+        const self = this;
+        
+        // Setup shop tab switching
+        const shopTabs = document.querySelectorAll('.shop-tab');
+        if (shopTabs && shopTabs.length > 0) {
+            shopTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    console.log(`Shop tab clicked: ${this.getAttribute('data-tab')}`);
+                    
+                    // Remove active class from all tabs
+                    shopTabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Hide all sections
+                    document.querySelectorAll('.shop-section').forEach(section => {
+                        section.classList.add('hidden');
+                    });
+                    
+                    // Show selected section
+                    const tabName = this.getAttribute('data-tab');
+                    const section = document.getElementById(`shop-${tabName}`);
+                    if (section) {
+                        section.classList.remove('hidden');
+                        console.log(`Showing shop section: shop-${tabName}`);
+                    } else {
+                        console.warn(`Shop section not found: shop-${tabName}`);
+                    }
+                });
+            });
+        } else {
+            console.warn("Shop tabs not found in the DOM");
+        }
+        
+        // Verify initial active tab and section
+        const activeTab = document.querySelector('.shop-tab.active');
+        if (activeTab) {
+            const activeTabName = activeTab.getAttribute('data-tab');
+            const activeSection = document.getElementById(`shop-${activeTabName}`);
+            if (activeSection) {
+                // Ensure all other sections are hidden
+                document.querySelectorAll('.shop-section').forEach(section => {
+                    if (section !== activeSection) {
+                        section.classList.add('hidden');
+                    } else {
+                        section.classList.remove('hidden');
+                    }
+                });
+                console.log(`Initial active shop section: shop-${activeTabName}`);
+            }
+        }
+        
+        // Setup back button
+        const backBtn = document.getElementById('shop-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
+                if (typeof self.switchPanel === 'function') {
+                    self.switchPanel('main-menu');
+                }
+            });
+        } else {
+            console.warn("Shop back button not found in the DOM");
+        }
+        
+        try {
+            // Populate hardware items
+            this.populateHardwareItems();
+            
+            // Populate AI models
+            this.populateAIModels();
+            
+            // Populate premium prompts
+            this.populatePremiumPrompts();
+            
+            // Populate cloud items
+            this.populateCloudItems();
+            
+            // Setup cloud credit purchase
+            this.setupCloudCreditPurchase();
+            
+            console.log("Shop initialization complete");
+        } catch (error) {
+            console.error("Error initializing shop:", error);
+        }
+    }
+
+    // Populate cloud items in the shop
+    populateCloudItems() {
+        try {
+            if (!this.shopManager) {
+                console.warn("Cannot populate cloud items: shopManager not available");
+                return;
+            }
+            
+            if (!this.hardwareManager) {
+                console.warn("Cannot populate cloud items: hardwareManager not available");
+                return;
+            }
+            
+            console.log("Populating cloud items...");
+            
+            const cloudSection = document.getElementById('shop-cloud');
+            if (!cloudSection) {
+                console.warn("Cannot populate cloud items: shop-cloud element not found");
+                return;
+            }
+            
+            // Force the cloud section to be displayed when debugging
+            const forceShowSection = false; // Set to true only for debugging
+            if (forceShowSection) {
+                // Make all sections hidden
+                document.querySelectorAll('.shop-section').forEach(section => {
+                    section.classList.add('hidden');
+                });
+                // Show cloud section
+                cloudSection.classList.remove('hidden');
+                
+                // Update tabs
+                document.querySelectorAll('.shop-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                    if (tab.getAttribute('data-tab') === 'cloud') {
+                        tab.classList.add('active');
+                    }
+                });
+            }
+            
+            // Get available hardware 
+            const availableHardware = this.shopManager.getAvailableHardware();
+            console.log("Available hardware:", availableHardware);
+            
+            // Create or get the dynamic cloud container
+            let dynamicCloudContainer = document.getElementById('dynamic-cloud-items');
+            if (!dynamicCloudContainer) {
+                console.log("Creating dynamic cloud container");
+                dynamicCloudContainer = document.createElement('div');
+                dynamicCloudContainer.id = 'dynamic-cloud-items';
+                dynamicCloudContainer.className = 'shop-cloud-packages';
+                
+                // Insert at the beginning of the cloud section
+                if (cloudSection.firstChild) {
+                    cloudSection.insertBefore(dynamicCloudContainer, cloudSection.firstChild);
+                } else {
+                    cloudSection.appendChild(dynamicCloudContainer);
+                }
+            }
+            
+            // Clear existing items
+            dynamicCloudContainer.innerHTML = '';
+            
+            // Filter to only show cloud hardware
+            const cloudHardware = availableHardware ? 
+                availableHardware.filter(hw => hw && hw.type === 'cloud') : [];
+            
+            console.log("Cloud hardware items:", cloudHardware);
+            
+            // Add custom cloud items in addition to those from hardware manager
+            const customCloudItems = [
+                {
+                    key: 'enterprise-cloud',
+                    name: 'Enterprise Cloud',
+                    tier: 3,
+                    type: 'cloud',
+                    specs: {
+                        credits: '2000 credits',
+                        servers: 'Dedicated clusters',
+                        performance: 'Ultra-performance'
+                    },
+                    description: 'Enterprise-grade cloud computing for large-scale AI training and deployment.',
+                    price: 3000
+                },
+                {
+                    key: 'gpu-cluster',
+                    name: 'GPU Compute Cluster',
+                    tier: 3,
+                    type: 'cloud',
+                    specs: {
+                        credits: '1500 credits',
+                        servers: 'GPU-optimized',
+                        performance: 'High-throughput'
+                    },
+                    description: 'Specialized GPU clusters for intensive ML workloads and model training.',
+                    price: 2500
+                },
+                {
+                    key: 'starter-cloud-bundle',
+                    name: 'Starter Cloud Bundle',
+                    tier: 1,
+                    type: 'cloud',
+                    specs: {
+                        credits: '250 credits',
+                        servers: 'Balanced instances',
+                        performance: 'Cost-effective'
+                    },
+                    description: 'Affordable cloud package with a balance of performance and cost.',
+                    price: 350
+                }
+            ];
+            
+            // Combine hardware cloud items with custom cloud items
+            const allCloudItems = [...cloudHardware, ...customCloudItems];
+            
+            // Check if we have cloud items to display
+            if (!allCloudItems || allCloudItems.length === 0) {
+                console.log("No cloud items to display");
+                // Show empty state
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.textContent = 'No additional cloud items available for purchase.';
+                dynamicCloudContainer.appendChild(emptyState);
+                return;
+            }
+            
+            // Create item cards for each cloud item
+            allCloudItems.forEach(cloud => {
+                if (!cloud || !cloud.key) return;
+                
+                const cloudPackage = document.createElement('div');
+                cloudPackage.className = 'cloud-package';
+                
+                let creditsText = '';
+                let serversText = '';
+                let performanceText = '';
+                
+                if (cloud.specs) {
+                    creditsText = cloud.specs.credits || '';
+                    serversText = cloud.specs.servers || '';
+                    performanceText = cloud.specs.performance || '';
+                }
+                
+                cloudPackage.innerHTML = `
+                    <h3>${cloud.name || 'Cloud Package'}</h3>
+                    <p class="tier-label">Tier ${cloud.tier || '?'}</p>
+                    <p>${cloud.description || ''}</p>
+                    <ul class="cloud-specs">
+                        ${creditsText ? `<li><strong>Credits:</strong> ${creditsText}</li>` : ''}
+                        ${serversText ? `<li><strong>Servers:</strong> ${serversText}</li>` : ''}
+                        ${performanceText ? `<li><strong>Performance:</strong> ${performanceText}</li>` : ''}
+                    </ul>
+                    <p class="package-price">$${(cloud.price || 0).toLocaleString()}</p>
+                    <button class="buy-hardware-btn" data-key="${cloud.key}">Purchase</button>
+                `;
+                
+                dynamicCloudContainer.appendChild(cloudPackage);
+                console.log(`Added cloud package: ${cloud.name}`);
+            });
+            
+            // Add event listeners to buy buttons
+            const self = this;
+            const buyButtons = dynamicCloudContainer.querySelectorAll('.buy-hardware-btn');
+            
+            if (buyButtons && buyButtons.length > 0) {
+                console.log(`Adding ${buyButtons.length} buy button listeners`);
+                buyButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const itemKey = this.getAttribute('data-key');
+                        if (!itemKey) return;
+                        
+                        if (typeof self.shopManager.purchaseHardware !== 'function') {
+                            console.error("purchaseHardware method not available");
+                            return;
+                        }
+                        
+                        // Purchase the cloud package
+                        const result = self.shopManager.purchaseHardware(itemKey);
+                        
+                        if (result && result.success) {
+                            if (typeof self.showNotification === 'function') {
+                                // Show notification with new total
+                                const newTotal = result.newTotal || (self.hardwareManager ? self.hardwareManager.cloudCredits : 'unknown');
+                                self.showNotification(`Purchased ${result.itemName || 'cloud package'}! Cloud Credits: ${newTotal}`, 'success');
+                            }
+                            
+                            // Update money display and resources
+                            if (typeof self.updateStats === 'function') {
+                                self.updateStats();
+                            }
+                            
+                            // Update resources panel if it exists
+                            if (typeof self.updateResourcesPanel === 'function') {
+                                self.updateResourcesPanel();
+                            }
+                            
+                            // Refresh cloud items
+                            self.populateCloudItems();
+                        } else {
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification(result?.message || 'Purchase failed!', 'error');
+                            }
+                        }
+                    });
+                });
+            } else {
+                console.log("No buy buttons found in dynamic cloud container");
+            }
+        } catch (error) {
+            console.error("Error populating cloud items:", error);
+        }
+    }
+    
+    // Populate hardware items in the shop
+    populateHardwareItems() {
+        try {
+            if (!this.shopManager) {
+                console.warn("Cannot populate hardware items: shopManager not available");
+                return;
+            }
+            
+            if (!this.hardwareManager) {
+                console.warn("Cannot populate hardware items: hardwareManager not available");
+                return;
+            }
+            
+            const hardwareList = document.getElementById('hardware-shop-list');
+            if (!hardwareList) {
+                console.warn("Cannot populate hardware items: hardware-shop-list element not found");
+                return;
+            }
+            
+            // Clear existing items
+            hardwareList.innerHTML = '';
+            
+            // Get available hardware
+            const availableHardware = this.shopManager.getAvailableHardware();
+            
+            if (!availableHardware || availableHardware.length === 0) {
+                hardwareList.innerHTML = '<p class="empty-state">No hardware upgrades available.</p>';
+                return;
+            }
+            
+            // Filter to only show computer hardware (exclude cloud items)
+            const computerHardware = availableHardware.filter(hw => hw.type === 'computer');
+            
+            if (computerHardware.length === 0) {
+                hardwareList.innerHTML = '<p class="empty-state">No hardware upgrades available.</p>';
+                return;
+            }
+            
+            // Create item cards for each hardware
+            computerHardware.forEach(hardware => {
+                if (!hardware || !hardware.key) return;
+                
+                const itemCard = document.createElement('div');
+                itemCard.className = 'shop-item';
+                itemCard.dataset.itemKey = hardware.key;
+                
+                let specsHTML = '';
+                if (hardware.specs) {
+                    for (const [key, value] of Object.entries(hardware.specs)) {
+                        specsHTML += `<li><strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value}</li>`;
+                    }
+                }
+                
+                itemCard.innerHTML = `
+                    <div class="item-header">
+                        <h3>${hardware.name || 'Unknown Hardware'}</h3>
+                        <span class="item-tier">Tier ${hardware.tier || '?'}</span>
+                    </div>
+                    <div class="item-details">
+                        <p>${hardware.description || 'No description available'}</p>
+                        <ul class="item-specs">
+                            ${specsHTML}
+                        </ul>
+                    </div>
+                    <div class="item-price">$${(hardware.price || 0).toLocaleString()}</div>
+                    <button class="buy-btn" data-type="hardware" data-key="${hardware.key}">Purchase</button>
+                `;
+                
+                hardwareList.appendChild(itemCard);
+            });
+            
+            // Add event listeners to buy buttons
+            const self = this;
+            const buyButtons = hardwareList.querySelectorAll('.buy-btn');
+            
+            if (buyButtons && buyButtons.length > 0) {
+                buyButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const itemKey = this.getAttribute('data-key');
+                        if (!itemKey) return;
+                        
+                        if (typeof self.shopManager.purchaseHardware !== 'function') {
+                            console.error("purchaseHardware method not available");
+                            return;
+                        }
+                        
+                        // Purchase the hardware
+                        const result = self.shopManager.purchaseHardware(itemKey);
+                        
+                        if (result && result.success) {
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification(`Purchased ${result.itemName || 'hardware'}!`, 'success');
+                            }
+                            
+                            // Update money display
+                            if (typeof self.updateStats === 'function') {
+                                self.updateStats();
+                            }
+                            
+                            // Update resources panel if it exists
+                            if (typeof self.updateResourcesPanel === 'function') {
+                                self.updateResourcesPanel();
+                            }
+                            
+                            // Refresh shop items
+                            self.populateHardwareItems();
+                        } else {
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification(result?.message || 'Purchase failed!', 'error');
+                            }
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error("Error populating hardware items:", error);
+        }
+    }
+    
+    // Populate AI models in the shop
+    populateAIModels() {
+        try {
+            if (!this.shopManager) {
+                console.warn("Cannot populate AI models: shopManager not available");
+                return;
+            }
+            
+            if (!this.aiModelManager) {
+                console.warn("Cannot populate AI models: aiModelManager not available");
+                return;
+            }
+            
+            const modelsList = document.getElementById('ai-models-shop-list');
+            if (!modelsList) {
+                console.warn("Cannot populate AI models: ai-models-shop-list element not found");
+                return;
+            }
+            
+            // Clear existing items
+            modelsList.innerHTML = '';
+            
+            // Get available AI models
+            const availableModels = this.shopManager.getAvailableAIModels();
+            
+            if (!availableModels || availableModels.length === 0) {
+                modelsList.innerHTML = '<p class="empty-state">No AI models available for purchase.</p>';
+                return;
+            }
+            
+            // Create item cards for each model
+            availableModels.forEach(model => {
+                if (!model || !model.key) return;
+                
+                const itemCard = document.createElement('div');
+                itemCard.className = 'shop-item';
+                itemCard.dataset.itemKey = model.key;
+                
+                const performance = model.performance || 3;
+                const creativity = model.creativity || 3;
+                
+                itemCard.innerHTML = `
+                    <div class="item-header">
+                        <h3>${model.name || 'Unknown Model'}</h3>
+                        <span class="item-tier">Tier ${model.tier || '?'}</span>
+                    </div>
+                    <div class="item-details">
+                        <p>${model.description || 'No description available'}</p>
+                        <div class="item-stats">
+                            <div class="stat-bar">
+                                <span class="stat-label">Performance</span>
+                                <div class="stat-value" style="width: ${performance * 20}%"></div>
+                            </div>
+                            <div class="stat-bar">
+                                <span class="stat-label">Creativity</span>
+                                <div class="stat-value" style="width: ${creativity * 20}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-price">$${(model.unlockCost || 0).toLocaleString()}</div>
+                    <button class="buy-btn" data-type="ai-model" data-key="${model.key}">Purchase</button>
+                `;
+                
+                modelsList.appendChild(itemCard);
+            });
+            
+            // Add event listeners to buy buttons
+            const self = this;
+            const buyButtons = modelsList.querySelectorAll('.buy-btn');
+            
+            if (buyButtons && buyButtons.length > 0) {
+                buyButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const modelKey = this.getAttribute('data-key');
+                        if (!modelKey) return;
+                        
+                        if (typeof self.shopManager.purchaseAIModel !== 'function') {
+                            console.error("purchaseAIModel method not available");
+                            return;
+                        }
+                        
+                        // Purchase the AI model
+                        const result = self.shopManager.purchaseAIModel(modelKey);
+                        
+                        if (result && result.success) {
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification(result.message || 'Purchased AI model!', 'success');
+                            }
+                            
+                            // Update money display
+                            if (typeof self.updateStats === 'function') {
+                                self.updateStats();
+                            }
+                            
+                            // Update resources panel if it exists
+                            if (typeof self.updateResourcesPanel === 'function') {
+                                self.updateResourcesPanel();
+                            }
+                            
+                            // Refresh shop items
+                            self.populateAIModels();
+                        } else {
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification(result?.message || 'Purchase failed!', 'error');
+                            }
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error("Error populating AI models:", error);
+        }
+    }
+    
+    // Populate premium prompts in the shop
+    populatePremiumPrompts() {
+        try {
+            if (!this.shopManager) {
+                console.warn("Cannot populate premium prompts: shopManager not available");
+                return;
+            }
+            
+            const promptsList = document.getElementById('prompts-shop-list');
+            if (!promptsList) {
+                console.warn("Cannot populate premium prompts: prompts-shop-list element not found");
+                return;
+            }
+            
+            // Clear existing items
+            promptsList.innerHTML = '';
+            
+            // Get available premium prompts
+            const availablePrompts = this.shopManager.getAvailablePremiumPrompts();
+            
+            if (!availablePrompts || availablePrompts.length === 0) {
+                promptsList.innerHTML = '<p class="empty-state">No premium prompts available for purchase.</p>';
+                return;
+            }
+            
+            // Create item cards for each prompt
+            availablePrompts.forEach(prompt => {
+                if (!prompt || !prompt.key) return;
+                
+                const itemCard = document.createElement('div');
+                itemCard.className = 'shop-item';
+                itemCard.dataset.itemKey = prompt.key;
+                
+                itemCard.innerHTML = `
+                    <div class="item-header">
+                        <h3>${prompt.name || 'Unknown Prompt'}</h3>
+                        <span class="item-tier">Tier ${prompt.tier || '?'}</span>
+                    </div>
+                    <div class="item-details">
+                        <p>${prompt.description || 'No description available'}</p>
+                        <div class="effect-badge">${prompt.effect || 'Effect unknown'}</div>
+                    </div>
+                    <div class="item-price">$${(prompt.price || 0).toLocaleString()}</div>
+                    <button class="buy-btn" data-type="prompt" data-key="${prompt.key}">Purchase</button>
+                `;
+                
+                promptsList.appendChild(itemCard);
+            });
+            
+            // Add event listeners to buy buttons
+            const self = this;
+            const buyButtons = promptsList.querySelectorAll('.buy-btn');
+            
+            if (buyButtons && buyButtons.length > 0) {
+                buyButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const promptKey = this.getAttribute('data-key');
+                        if (!promptKey) return;
+                        
+                        if (typeof self.shopManager.purchasePremiumPrompt !== 'function') {
+                            console.error("purchasePremiumPrompt method not available");
+                            return;
+                        }
+                        
+                        // Purchase the premium prompt
+                        const result = self.shopManager.purchasePremiumPrompt(promptKey);
+                        
+                        if (result && result.success) {
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification(result.message || 'Purchased premium prompt!', 'success');
+                            }
+                            
+                            // Update money display
+                            if (typeof self.updateStats === 'function') {
+                                self.updateStats();
+                            }
+                            
+                            // Update resources panel if it exists
+                            if (typeof self.updateResourcesPanel === 'function') {
+                                self.updateResourcesPanel();
+                            }
+                            
+                            // Refresh shop items
+                            self.populatePremiumPrompts();
+                        } else {
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification(result?.message || 'Purchase failed!', 'error');
+                            }
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error("Error populating premium prompts:", error);
+        }
+    }
+    
+    // Setup cloud credit purchase
+    setupCloudCreditPurchase() {
+        try {
+            if (!this.shopManager) {
+                console.warn("Cannot set up cloud credit purchase: shopManager not available");
+                return;
+            }
+            
+            const buyButtons = document.querySelectorAll('.buy-cloud-btn');
+            if (!buyButtons || buyButtons.length === 0) {
+                console.warn("Cannot set up cloud credit purchase: buy-cloud-btn elements not found");
+                return;
+            }
+            
+            const self = this;
+            
+            buyButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const amountStr = this.getAttribute('data-amount');
+                    const priceStr = this.getAttribute('data-price');
+                    
+                    if (!amountStr || !priceStr) {
+                        console.error("Missing amount or price attribute for cloud credits");
+                        return;
+                    }
+                    
+                    const amount = parseInt(amountStr, 10);
+                    const price = parseInt(priceStr, 10);
+                    
+                    if (isNaN(amount) || isNaN(price)) {
+                        console.error('Invalid cloud credit data');
+                        return;
+                    }
+                    
+                    if (typeof self.shopManager.purchaseCloudCredits !== 'function') {
+                        console.error("purchaseCloudCredits method not available");
+                        return;
+                    }
+                    
+                    console.log(`Attempting to purchase ${amount} cloud credits for $${price}`);
+                    // Purchase cloud credits
+                    const result = self.shopManager.purchaseCloudCredits(amount, price);
+                    
+                    if (result && result.success) {
+                        if (typeof self.showNotification === 'function') {
+                            // Show notification with new total
+                            const newTotal = result.newTotal || (self.hardwareManager ? self.hardwareManager.cloudCredits : 'unknown');
+                            self.showNotification(`Purchased ${amount} cloud credits! Total: ${newTotal}`, 'success');
+                        }
+                        
+                        console.log(`Successfully purchased credits. New total: ${self.hardwareManager.cloudCredits}`);
+                        
+                        // Update money display and resources
+                        if (typeof self.updateStats === 'function') {
+                            self.updateStats();
+                        }
+                        
+                        // Update resources panel if it exists
+                        if (typeof self.updateResourcesPanel === 'function') {
+                            self.updateResourcesPanel();
+                        }
+                    } else {
+                        if (typeof self.showNotification === 'function') {
+                            self.showNotification(result?.message || 'Purchase failed! Not enough money.', 'error');
+                        }
+                    }
+                });
+            });
+        } catch (error) {
+            console.error("Error setting up cloud credit purchase:", error);
+        }
+    }
+    
+    // Add a method to update the resources panel
+    updateResourcesPanel() {
+        console.log("Updating resources panel");
+        
+        // Update the money display in resources
+        const resourcesMoney = document.getElementById('resources-money');
+        if (resourcesMoney && this.gameState) {
+            resourcesMoney.textContent = this.gameState.money.toLocaleString();
+        }
+        
+        // Note: Cloud Credits display removed from Financial Resources section
+        // and now only shown in Hardware Inventory
+        
+        // Update hardware inventory list
+        this.updateHardwareInventory();
+        
+        // Update AI models list
+        this.updateAIModelsList();
+        
+        // Update prompt collection list
+        this.updatePromptCollection();
+    }
+    
+    // Update hardware inventory display
+    updateHardwareInventory() {
+        const hardwareList = document.getElementById('hardware-inventory-list');
+        if (!hardwareList || !this.hardwareManager) return;
+        
+        // Clear the list
+        hardwareList.innerHTML = '';
+        
+        // Get owned hardware
+        const ownedHardware = this.hardwareManager.getOwnedHardware();
+        
+        if (!ownedHardware || ownedHardware.length === 0) {
+            hardwareList.innerHTML = '<p class="empty-state">No hardware items owned yet.</p>';
+            return;
+        }
+        
+        // Create a card for each hardware item
+        ownedHardware.forEach(hardware => {
+            const hardwareCard = document.createElement('div');
+            hardwareCard.className = 'resource-card hardware-card tier-' + hardware.tier;
+            
+            let specsHTML = '';
+            if (hardware.specs) {
+                for (const [key, value] of Object.entries(hardware.specs)) {
+                    specsHTML += `<div class="resource-attribute">${key}: ${value}</div>`;
+                }
+            }
+            
+            hardwareCard.innerHTML = `
+                <div class="resource-icon">${hardware.type === 'computer' ? '💻' : '☁️'}</div>
+                <div class="resource-details">
+                    <div class="resource-name">${hardware.name}</div>
+                    <div class="resource-description">${hardware.description || ''}</div>
+                    <div class="resource-attributes">
+                        <div class="resource-tier">Tier ${hardware.tier}</div>
+                        ${specsHTML}
+                    </div>
+                </div>
+            `;
+            
+            hardwareList.appendChild(hardwareCard);
+        });
+    }
+    
+    // Update AI models list
+    updateAIModelsList() {
+        const modelsList = document.getElementById('ai-models-list');
+        if (!modelsList || !this.aiModelManager) return;
+        
+        // Clear the list
+        modelsList.innerHTML = '';
+        
+        // Get available models
+        const availableModels = this.aiModelManager.availableModels;
+        
+        if (!availableModels || availableModels.length === 0) {
+            modelsList.innerHTML = '<p class="empty-state">No AI models owned yet.</p>';
+            return;
+        }
+        
+        // Create a card for each AI model
+        availableModels.forEach(modelKey => {
+            const model = this.aiModelManager.models[modelKey];
+            if (!model) return;
+            
+            const modelCard = document.createElement('div');
+            modelCard.className = 'resource-card model-card tier-' + model.tier;
+            
+            modelCard.innerHTML = `
+                <div class="resource-icon">🤖</div>
+                <div class="resource-details">
+                    <div class="resource-name">${model.name}</div>
+                    <div class="resource-description">${model.description || ''}</div>
+                    <div class="resource-attributes">
+                        <div class="resource-tier">Tier ${model.tier}</div>
+                        <div class="resource-attribute">Performance: ${model.performance}</div>
+                        <div class="resource-attribute">Creativity: ${model.creativity}</div>
+                    </div>
+                </div>
+            `;
+            
+            modelsList.appendChild(modelCard);
+        });
+    }
+    
+    // Update prompt collection
+    updatePromptCollection() {
+        const promptsList = document.getElementById('prompt-collection-list');
+        if (!promptsList || !this.promptLibrary) return;
+        
+        // Clear the list
+        promptsList.innerHTML = '';
+        
+        // Get available prompts
+        const availablePrompts = this.promptLibrary.getUnlockedPrompts();
+        
+        if (!availablePrompts || availablePrompts.length === 0) {
+            promptsList.innerHTML = '<p class="empty-state">No premium prompts owned yet.</p>';
+            return;
+        }
+        
+        // Create a card for each prompt
+        availablePrompts.forEach(prompt => {
+            const promptCard = document.createElement('div');
+            promptCard.className = 'resource-card prompt-card tier-' + (prompt.tier || 1);
+            
+            promptCard.innerHTML = `
+                <div class="resource-icon">📝</div>
+                <div class="resource-details">
+                    <div class="resource-name">${prompt.name}</div>
+                    <div class="resource-description">${prompt.description || ''}</div>
+                    <div class="resource-attributes">
+                        <div class="resource-tier">Tier ${prompt.tier || 1}</div>
+                        <div class="resource-attribute">${prompt.effect || ''}</div>
+                    </div>
+                </div>
+            `;
+            
+            promptsList.appendChild(promptCard);
+        });
+    }
+
+    // Initialize the resources panel
+    initializeResourcesPanel() {
+        const resourcesBackBtn = document.getElementById('resources-back-btn');
+        if (resourcesBackBtn) {
+            const self = this;
+            
+            resourcesBackBtn.addEventListener('click', function() {
+                if (typeof self.switchPanel === 'function') {
+                    self.switchPanel('main-menu');
+                }
+            });
+        }
+        
+        // Handle resources button clicks to update panel content when opened
+        const resourcesBtn = document.getElementById('resources-btn');
+        if (resourcesBtn) {
+            const self = this;
+            
+            resourcesBtn.addEventListener('click', function() {
+                // Update resources panel content
+                if (typeof self.updateResourcesPanel === 'function') {
+                    self.updateResourcesPanel();
+                }
+            });
         }
     }
 } 

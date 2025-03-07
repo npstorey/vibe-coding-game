@@ -282,22 +282,44 @@
                                 </div>
                             </div>
                             <div id="shop-cloud" class="shop-section hidden">
+                                <div id="dynamic-cloud-items" class="shop-cloud-packages">
+                                    <!-- Dynamic cloud items from hardware manager will be loaded here -->
+                                </div>
+                                <h3 class="cloud-section-title">Cloud Credit Packages</h3>
                                 <div class="shop-cloud-packages">
                                     <div class="cloud-package">
                                         <h3>Basic Package</h3>
-                                        <p class="package-credits">100 Credits</p>
+                                        <p class="tier-label">Tier 1</p>
+                                        <p>Entry-level cloud computing resources for simple deployments.</p>
+                                        <ul class="cloud-specs">
+                                            <li><strong>Credits:</strong> 100 credits</li>
+                                            <li><strong>Servers:</strong> Shared instances</li>
+                                            <li><strong>Performance:</strong> Standard</li>
+                                        </ul>
                                         <p class="package-price">$200</p>
                                         <button class="buy-cloud-btn" data-amount="100" data-price="200">Purchase</button>
                                     </div>
                                     <div class="cloud-package">
                                         <h3>Standard Package</h3>
-                                        <p class="package-credits">300 Credits</p>
+                                        <p class="tier-label">Tier 2</p>
+                                        <p>More robust cloud computing with dedicated resources.</p>
+                                        <ul class="cloud-specs">
+                                            <li><strong>Credits:</strong> 300 credits</li>
+                                            <li><strong>Servers:</strong> Dedicated instances</li>
+                                            <li><strong>Performance:</strong> Enhanced</li>
+                                        </ul>
                                         <p class="package-price">$500</p>
                                         <button class="buy-cloud-btn" data-amount="300" data-price="500">Purchase</button>
                                     </div>
                                     <div class="cloud-package">
                                         <h3>Professional Package</h3>
-                                        <p class="package-credits">1000 Credits</p>
+                                        <p class="tier-label">Tier 3</p>
+                                        <p>High-performance cloud computing for demanding workloads.</p>
+                                        <ul class="cloud-specs">
+                                            <li><strong>Credits:</strong> 1000 credits</li>
+                                            <li><strong>Servers:</strong> Premium instances</li>
+                                            <li><strong>Performance:</strong> High-performance</li>
+                                        </ul>
                                         <p class="package-price">$1500</p>
                                         <button class="buy-cloud-btn" data-amount="1000" data-price="1500">Purchase</button>
                                     </div>
@@ -333,13 +355,6 @@
                                     <div class="resource-details">
                                         <div class="resource-name">Cash Balance</div>
                                         <div class="resource-value">$<span id="resources-money">0</span></div>
-                                    </div>
-                                </div>
-                                <div class="resource-card finance-card">
-                                    <div class="resource-icon">☁️</div>
-                                    <div class="resource-details">
-                                        <div class="resource-name">Cloud Credits</div>
-                                        <div class="resource-value"><span id="resources-cloud-credits">0</span> credits</div>
                                     </div>
                                 </div>
                             </div>
@@ -491,5 +506,8 @@
         });
     })();
     </script>
+    
+    <!-- Load the Code Sprint button fix -->
+    <script src="debug/debug-clickability.js"></script>
 </body>
 </html> 

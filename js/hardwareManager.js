@@ -66,11 +66,17 @@ export class HardwareManager {
         
         // Default player hardware
         this.ownedHardware = ['starter-pc'];
-        this.cloudCredits = 50;
+        this.cloudCredits = 50; // Starting cloud credits
         
         // GPU resource management
         this.gpuUnits = 1; // Player starts with 1 GPU
         this.gpuInUse = false; // Initially not in use
+        
+        console.log("Hardware Manager initialized with:", {
+            ownedHardware: this.ownedHardware,
+            cloudCredits: this.cloudCredits,
+            gpuUnits: this.gpuUnits
+        });
     }
     
     // Get all available hardware for purchase
@@ -126,18 +132,37 @@ export class HardwareManager {
         };
     }
     
-    // Get current cloud credits
+    // Get cloud credits
     getCloudCredits() {
         return this.cloudCredits;
     }
     
+    // Add cloud credits
+    addCloudCredits(amount) {
+        if (isNaN(amount) || amount <= 0) {
+            console.error("Invalid cloud credits amount:", amount);
+            return false;
+        }
+        
+        this.cloudCredits += amount;
+        console.log(`Added ${amount} cloud credits. New total: ${this.cloudCredits}`);
+        return true;
+    }
+    
     // Use cloud credits
     useCloudCredits(amount) {
+        if (isNaN(amount) || amount <= 0) {
+            console.error("Invalid cloud credits amount:", amount);
+            return false;
+        }
+        
         if (this.cloudCredits < amount) {
+            console.error(`Not enough cloud credits. Have ${this.cloudCredits}, need ${amount}`);
             return false;
         }
         
         this.cloudCredits -= amount;
+        console.log(`Used ${amount} cloud credits. Remaining: ${this.cloudCredits}`);
         return true;
     }
     

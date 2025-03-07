@@ -56,6 +56,123 @@ export class ShopManager {
     
     // Purchase hardware
     purchaseHardware(hardwareKey) {
+        // First check if it's a custom cloud item
+        if (hardwareKey === 'enterprise-cloud') {
+            const cost = 3000;
+            
+            if (this.gameState.money < cost) {
+                return { success: false, message: 'Not enough money' };
+            }
+            
+            // Add cloud credits directly using the hardware manager method
+            if (this.hardwareManager && typeof this.hardwareManager.addCloudCredits === 'function') {
+                this.hardwareManager.addCloudCredits(2000);
+            } else {
+                // Fallback to direct assignment
+                this.hardwareManager.cloudCredits += 2000;
+            }
+            
+            // Deduct money
+            this.gameState.money -= cost;
+            
+            // Add to events log
+            this.gameState.todayEvents.push({
+                type: 'purchase',
+                item: 'cloud_package',
+                name: 'Enterprise Cloud',
+                cost: cost,
+                description: 'Purchased Enterprise Cloud Package (2000 credits)'
+            });
+            
+            // Save state after purchase
+            this.gameState.saveState();
+            
+            return {
+                success: true,
+                message: 'Purchased Enterprise Cloud Package',
+                itemName: 'Enterprise Cloud',
+                cost: cost,
+                newTotal: this.hardwareManager.cloudCredits
+            };
+        }
+        else if (hardwareKey === 'gpu-cluster') {
+            const cost = 2500;
+            
+            if (this.gameState.money < cost) {
+                return { success: false, message: 'Not enough money' };
+            }
+            
+            // Add cloud credits directly using the hardware manager method
+            if (this.hardwareManager && typeof this.hardwareManager.addCloudCredits === 'function') {
+                this.hardwareManager.addCloudCredits(1500);
+            } else {
+                // Fallback to direct assignment
+                this.hardwareManager.cloudCredits += 1500;
+            }
+            
+            // Deduct money
+            this.gameState.money -= cost;
+            
+            // Add to events log
+            this.gameState.todayEvents.push({
+                type: 'purchase',
+                item: 'cloud_package',
+                name: 'GPU Compute Cluster',
+                cost: cost,
+                description: 'Purchased GPU Compute Cluster (1500 credits)'
+            });
+            
+            // Save state after purchase
+            this.gameState.saveState();
+            
+            return {
+                success: true,
+                message: 'Purchased GPU Compute Cluster',
+                itemName: 'GPU Compute Cluster',
+                cost: cost,
+                newTotal: this.hardwareManager.cloudCredits
+            };
+        }
+        else if (hardwareKey === 'starter-cloud-bundle') {
+            const cost = 350;
+            
+            if (this.gameState.money < cost) {
+                return { success: false, message: 'Not enough money' };
+            }
+            
+            // Add cloud credits directly using the hardware manager method
+            if (this.hardwareManager && typeof this.hardwareManager.addCloudCredits === 'function') {
+                this.hardwareManager.addCloudCredits(250);
+            } else {
+                // Fallback to direct assignment
+                this.hardwareManager.cloudCredits += 250;
+            }
+            
+            // Deduct money
+            this.gameState.money -= cost;
+            
+            // Add to events log
+            this.gameState.todayEvents.push({
+                type: 'purchase',
+                item: 'cloud_package',
+                name: 'Starter Cloud Bundle',
+                cost: cost,
+                description: 'Purchased Starter Cloud Bundle (250 credits)'
+            });
+            
+            // Save state after purchase
+            this.gameState.saveState();
+            
+            return {
+                success: true,
+                message: 'Purchased Starter Cloud Bundle',
+                itemName: 'Starter Cloud Bundle',
+                cost: cost,
+                newTotal: this.hardwareManager.cloudCredits
+            };
+        }
+        
+        // Handle regular hardware through hardware manager
         const result = this.hardwareManager.purchaseHardware(hardwareKey, this.gameState.money);
         
         if (result.success) {
@@ -174,7 +291,15 @@ export class ShopManager {
             return { success: false, message: 'Not enough money' };
         }
         
-        this.hardwareManager.cloudCredits += amount;
+        // Use the hardwareManager's addCloudCredits method
+        if (this.hardwareManager && typeof this.hardwareManager.addCloudCredits === 'function') {
+            this.hardwareManager.addCloudCredits(amount);
+        } else {
+            // Fallback to direct assignment if method doesn't exist
+            this.hardwareManager.cloudCredits += amount;
+        }
+        
+        // Deduct money
         this.gameState.money -= price;
         
         // Add to events log
@@ -189,10 +314,13 @@ export class ShopManager {
         // Save state after purchase
         this.gameState.saveState();
         
+        console.log(`Cloud credits purchase complete. New total: ${this.hardwareManager.cloudCredits}`);
+        
         return { 
             success: true, 
             message: `Purchased ${amount} cloud credits`, 
-            cost: price 
+            cost: price,
+            newTotal: this.hardwareManager.cloudCredits
         };
     }
 } 

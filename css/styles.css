@@ -2121,35 +2121,80 @@ input[type="submit"] {
 /* Shop Panel Styles */
 .shop-tabs {
     display: flex;
-    margin-bottom: 20px;
-    background-color: rgba(20, 20, 30, 0.5);
-    border-radius: 30px;
-    padding: 5px;
+    justify-content: space-between;
+    background-color: rgba(15, 30, 50, 0.7);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    overflow: hidden;
 }
 
 .shop-tab {
     flex: 1;
-    background: transparent;
+    background: none;
     border: none;
-    color: #aaa;
-    padding: 10px 15px;
+    color: #99a8c7;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border-radius: 5px;
     cursor: pointer;
-    border-radius: 25px;
-    transition: all 0.3s;
-    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.shop-tab:hover {
+    color: white;
+    background-color: rgba(77, 158, 255, 0.1);
 }
 
 .shop-tab.active {
-    background-color: rgba(40, 40, 50, 0.8);
-    color: #64ecda;
+    color: white;
+    background-color: rgba(77, 158, 255, 0.3);
+    font-weight: 600;
 }
 
+.shop-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 25%;
+    width: 50%;
+    height: 3px;
+    background-color: #4d9eff;
+    animation: tabGlow 1.5s infinite alternate;
+}
+
+@keyframes tabGlow {
+    0% { background-color: #4d9eff; }
+    100% { background-color: #5eead4; }
+}
+
+/* Shop section */
 .shop-section {
-    display: none;
+    display: block;
+    padding: 1rem;
+    transition: opacity 0.3s ease;
 }
 
-.shop-section.active {
-    display: block;
+.shop-section.hidden {
+    display: none !important;
+}
+
+/* Cloud section improvements */
+#shop-cloud {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.cloud-section-title {
+    color: #4d9eff;
+    font-size: 1.3rem;
+    margin: 1.5rem 0 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(77, 158, 255, 0.2);
+    text-align: center;
 }
 
 .shop-items-list {
@@ -4406,4 +4451,243 @@ div:has(>:contains("TEST SCRIPT SHOWING CODING PANEL")) {
 
 #debug-collapse-btn.collapsed {
     transform: rotate(180deg);
+}
+
+/* Cloud package styles */
+.shop-cloud-packages {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.cloud-package {
+    background-color: rgba(15, 30, 60, 0.8);
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.cloud-package:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+}
+
+.cloud-package h3 {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+    color: #4d9eff;
+}
+
+.cloud-package .tier-label {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: rgba(77, 158, 255, 0.3);
+    color: #fff;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.cloud-package p {
+    margin: 0.5rem 0;
+    color: #ccc;
+}
+
+.cloud-specs {
+    margin: 0.75rem 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+.cloud-specs li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+.cloud-specs li strong {
+    color: #4d9eff;
+    margin-right: 0.5rem;
+    min-width: 90px;
+}
+
+.package-credits {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #4d9eff !important;
+}
+
+.package-price {
+    margin-top: auto !important;
+    padding-top: 0.75rem;
+    font-size: 1.5rem !important;
+    font-weight: bold;
+    color: #fff !important;
+}
+
+.buy-cloud-btn, .buy-hardware-btn {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.6rem 1.2rem;
+    margin-top: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.buy-cloud-btn:hover, .buy-hardware-btn:hover {
+    background-color: #1557b0;
+}
+
+/* Cloud section enhancements */
+.cloud-section-title {
+    color: #4d9eff;
+    font-size: 1.3rem;
+    margin: 1.5rem 0 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(77, 158, 255, 0.2);
+    text-align: center;
+}
+
+/* Updated shop-cloud-packages for better spacing */
+.shop-cloud-packages {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Empty state styling */
+#shop-cloud .empty-state {
+    text-align: center;
+    color: #99a8c7;
+    padding: 2rem;
+    font-style: italic;
+    background: rgba(15, 30, 60, 0.4);
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+/* Update main container padding */
+#shop-cloud {
+    padding: 1rem;
+}
+
+/* Add animation for tier labels */
+.cloud-package .tier-label {
+    animation: tierLabelPulse 2s infinite alternate;
+}
+
+@keyframes tierLabelPulse {
+    0% { background-color: rgba(77, 158, 255, 0.3); }
+    100% { background-color: rgba(77, 158, 255, 0.5); }
+}
+
+/* Update cloud package styles */
+.cloud-package {
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(15, 30, 60, 0.8);
+    border-radius: 8px;
+    padding: 1.25rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-height: 270px;
+}
+
+.cloud-package:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced Notification Styles */
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    max-width: 350px;
+}
+
+.notification {
+    background-color: rgba(30, 40, 60, 0.9);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    margin-bottom: 10px;
+    opacity: 0;
+    transform: translateX(50px);
+    transition: opacity 0.3s, transform 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.notification-message {
+    flex-grow: 1;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.notification.success {
+    background-color: rgba(20, 100, 60, 0.9);
+    border-left: 4px solid #5eead4;
+}
+
+.notification.error {
+    background-color: rgba(120, 30, 40, 0.9);
+    border-left: 4px solid #f87171;
+}
+
+.notification.warning {
+    background-color: rgba(120, 80, 20, 0.9);
+    border-left: 4px solid #fbbf24;
+}
+
+.notification.emphasis {
+    font-weight: bold;
+    padding: 14px 18px;
+    border-width: 6px;
+    font-size: 1.05rem;
+}
+
+@keyframes notificationWiggle {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+}
+
+/* Ensure error notifications stand out more */
+.notification.error.emphasis {
+    background-color: rgba(140, 30, 40, 0.95);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
