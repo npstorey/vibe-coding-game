@@ -62,6 +62,13 @@ export class UI {
             this.computerScreen.classList.add('hidden');
         }
         
+        // Apply our fix to the Code Sprint button after a short delay to ensure DOM is ready
+        setTimeout(() => {
+            console.log("🔄 Applying UI fixes...");
+            this.fixCodeSprintButton();
+            this.fixCodingPanelBackButton();
+        }, 500);
+        
         return this;
     }
     
@@ -89,6 +96,11 @@ export class UI {
         this.hardwareManager = hardwareManager;
         this.shopManager = shopManager;
         this.resourceManager = resourceManager;
+        
+        // Apply our comprehensive fix for the Code Sprint button
+        // We do this here to ensure it's fixed when events are initialized
+        console.log("🔄 Applying Code Sprint button fix during event initialization...");
+        setTimeout(() => this.fixCodeSprintButton(), 800);
         
         // Ensure project manager has access to hardware manager and UI
         if (this.projectManager) {
@@ -1204,197 +1216,153 @@ export class UI {
         }
     }
     
-    // Set up the main menu
+    // Enhanced set up the main menu with more robust initialization
     setupMainMenu() {
+        console.log("🔄 Setting up main menu with robust initialization");
         var self = this;
         
-        // Main menu button handlers
-        var codeBtn = document.getElementById('code-btn');
-        if (codeBtn) {
-            // Only set up event listener if it doesn't already have one
-            if (!codeBtn._initialized) {
-                codeBtn.addEventListener('click', function() {
-                    console.log("Code Sprint button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
+        try {
+            // Force clean the main menu first to avoid duplicate handlers
+            const mainMenu = document.getElementById('main-menu');
+            if (!mainMenu) {
+                console.error("🔴 Main menu element not found!");
+                return false;
+            }
+            
+            // Ensure main menu has proper styling
+            mainMenu.style.display = 'flex';
+            mainMenu.style.flexDirection = 'column';
+            mainMenu.style.justifyContent = 'center';
+            mainMenu.style.alignItems = 'center';
+            mainMenu.style.gap = '20px';
+            mainMenu.style.padding = '20px';
+            
+            // Get ALL menu buttons (replacing existing handlers for each)
+            const menuButtonsConfig = [
+                {id: 'code-btn', actionType: 'code', label: 'Code Sprint', icon: '💻'},
+                {id: 'email-btn', actionType: 'email', label: 'Check Email', icon: '📧'},
+                {id: 'social-btn', actionType: 'social', label: 'Social Media', icon: '🌐'},
+                {id: 'shop-btn', actionType: 'shop', label: 'Buy Stuff', icon: '🛒'}
+            ];
+            
+            // Process each button
+            menuButtonsConfig.forEach(btnConfig => {
+                // Get the button
+                var btn = document.getElementById(btnConfig.id);
+                
+                // If button doesn't exist, create it
+                if (!btn) {
+                    console.log(`Creating missing button: ${btnConfig.id}`);
+                    btn = document.createElement('button');
+                    btn.id = btnConfig.id;
+                    btn.className = 'menu-button';
+                    btn.setAttribute('data-action', btnConfig.actionType);
                     
-                    try {
+                    // Add icon and label
+                    btn.innerHTML = `
+                        <span class="menu-icon">${btnConfig.icon}</span>
+                        ${btnConfig.label}
+                    `;
+                    
+                    // Add to main menu
+                    mainMenu.appendChild(btn);
+                } else {
+                    // Replace existing button to remove all event listeners
+                    var newBtn = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn, btn);
+                    btn = newBtn;
+                }
+                
+                // Add new event listeners based on button type
+                if (btnConfig.id === 'code-btn') {
+                    // Code Sprint button
+                    btn.addEventListener('click', function(event) {
+                        console.log("🖥️ Code Sprint button clicked (ROBUST HANDLER)");
+                        event.preventDefault();
+                        event.stopPropagation();
+                        
                         // Check time blocks
-                        if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                            console.log("Time block deducted for Code Sprint - remaining:", self.gameState.getAvailableTimeBlocks());
+                        if (self.gameState && 
+                            typeof self.gameState.getAvailableTimeBlocks === 'function' && 
+                            self.gameState.getAvailableTimeBlocks() > 0 && 
+                            typeof self.gameState.useTimeBlock === 'function' && 
+                            self.gameState.useTimeBlock(1)) {
                             
-                            // Immediately update the time blocks counter in the UI
+                            // Update UI time blocks
                             if (self.timeBlocks) {
                                 self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
                             }
                             
-                            // Switch to the coding panel - the critical step
-                            try {
-                                // Use our more robust method to show the coding panel
-                                const success = self.ensureCodingPanelVisible();
-                                
-                                if (!success) {
-                                    console.error("Failed to show coding panel with ensureCodingPanelVisible");
-                                    
-                                    // Fallback to direct manipulation as a last resort
-                                    const codingPanel = document.getElementById('coding-panel');
-                                    if (codingPanel) {
-                                        // Hide all panels first
-                                        document.querySelectorAll('.panel, #main-menu').forEach(panel => {
-                                            panel.classList.add('hidden');
-                                            panel.style.display = 'none';
-                                        });
-                                        
-                                        // Show coding panel
-                                        codingPanel.classList.remove('hidden');
-                                        codingPanel.style.display = 'block';
-                                        console.log("Coding panel shown with fallback method");
-                                    } else {
-                                        console.error("CRITICAL ERROR: Coding panel not found even in fallback!");
-                                    }
-                                }
-                            } catch (error) {
-                                console.error("Error showing coding panel:", error);
-                                
-                                // Last resort fallback
-                                try {
-                                    self.switchPanel('coding-panel');
-                                } catch (e) {
-                                    console.error("Even switchPanel failed:", e);
+                            // Show the coding panel (with multiple fallbacks)
+                            if (typeof self.directShowCodeSprint === 'function') {
+                                self.directShowCodeSprint();
+                            } else if (typeof self._forceShowCodeSprint === 'function') {
+                                self._forceShowCodeSprint();
+                            } else if (typeof self.switchPanel === 'function') {
+                                self.switchPanel('coding-panel');
+                            } else {
+                                // Direct DOM manipulation as last resort
+                                const codingPanel = document.getElementById('coding-panel');
+                                const mainMenu = document.getElementById('main-menu');
+                                if (codingPanel && mainMenu) {
+                                    mainMenu.style.display = 'none';
+                                    codingPanel.classList.remove('hidden');
+                                    codingPanel.style.display = 'block';
                                 }
                             }
                             
-                            self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
-                            self.updateStats();
-                            
-                            // Force a redraw for browsers that might batch updates
-                            setTimeout(() => {
-                                // Update again after a small delay to ensure UI is refreshed
-                                if (self.timeBlocks) {
-                                    self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
-                                }
-                            }, 50);
-                            
-                            // Check if all time blocks are used
-                            if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                                self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                            // Show notification
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
                             }
                         } else {
-                            self.showNotification("Not enough time blocks left!", "error");
+                            // Not enough time blocks
+                            if (typeof self.showNotification === 'function') {
+                                self.showNotification("Not enough time blocks left!", "error");
+                            }
                         }
-                    } catch (error) {
-                        console.error("Error in code button handler:", error);
-                    }
-                });
-                codeBtn._initialized = true;
-                console.log("Code Sprint button event listener initialized");
-            } else {
-                console.log("Code Sprint button already has event listener");
-            }
-        } else {
-            console.error("Code Sprint button not found");
-        }
-        
-        var emailBtn = document.getElementById('email-btn');
-        if (emailBtn) {
-            // Only set up event listener if it doesn't already have one
-            if (!emailBtn._initialized) {
-                emailBtn.addEventListener('click', function() {
-                    console.log("Email button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                        console.log("Time block deducted for Email - remaining:", self.gameState.getAvailableTimeBlocks());
-                        self.switchPanel('email-panel');
-                        self.updateEmailList();
-                        self.showNotification("Checking email! (Used 1 Time Block)", "info");
-                        self.updateStats();
+                    });
+                } else if (btnConfig.id === 'email-btn') {
+                    // Email button
+                    btn.addEventListener('click', function(event) {
+                        console.log("📧 Email button clicked");
+                        event.preventDefault();
+                        event.stopPropagation();
                         
-                        // Check if all time blocks are used
-                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                        if (typeof self.switchPanel === 'function') {
+                            self.switchPanel('email-panel');
                         }
-                    } else {
-                        self.showNotification("Not enough time blocks left!", "error");
-                    }
-                });
-                emailBtn._initialized = true;
-                console.log("Email button event listener initialized");
-            } else {
-                console.log("Email button already has event listener");
-            }
-        }
-        
-        var socialBtn = document.getElementById('social-btn');
-        if (socialBtn) {
-            // Only set up event listener if it doesn't already have one
-            if (!socialBtn._initialized) {
-                socialBtn.addEventListener('click', function() {
-                    console.log("Social button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                        console.log("Time block deducted for Social - remaining:", self.gameState.getAvailableTimeBlocks());
-                        self.switchPanel('social-panel');
-                        self.initSocialPanel();
-                        self.showNotification("Scrolling social media! (Used 1 Time Block)", "info");
-                        self.updateStats();
+                    });
+                } else if (btnConfig.id === 'social-btn') {
+                    // Social media button
+                    btn.addEventListener('click', function(event) {
+                        console.log("🌐 Social media button clicked");
+                        event.preventDefault();
+                        event.stopPropagation();
                         
-                        // Check if all time blocks are used
-                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                        if (typeof self.switchPanel === 'function') {
+                            self.switchPanel('social-panel');
                         }
-                    } else {
-                        self.showNotification("Not enough time blocks left!", "error");
-                    }
-                });
-                socialBtn._initialized = true;
-                console.log("Social button event listener initialized");
-            } else {
-                console.log("Social button already has event listener");
-            }
-        }
-        
-        var shopBtn = document.getElementById('shop-btn');
-        if (shopBtn) {
-            // Only set up event listener if it doesn't already have one
-            if (!shopBtn._initialized) {
-                shopBtn.addEventListener('click', function() {
-                    console.log("Shop button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                    if (self.gameState.getAvailableTimeBlocks() > 0 && self.gameState.useTimeBlock(1)) {
-                        console.log("Time block deducted for Shop - remaining:", self.gameState.getAvailableTimeBlocks());
-                        self.switchPanel('shop-panel');
-                        self.showNotification("Shopping for tech! (Used 1 Time Block)", "info");
-                        self.updateStats();
+                    });
+                } else if (btnConfig.id === 'shop-btn') {
+                    // Shop button
+                    btn.addEventListener('click', function(event) {
+                        console.log("🛒 Shop button clicked");
+                        event.preventDefault();
+                        event.stopPropagation();
                         
-                        // Check if all time blocks are used
-                        if (self.gameState.getAvailableTimeBlocks() <= 0) {
-                            self.showNotification("All time blocks used! Day will end when you close the computer.", "warning");
+                        if (typeof self.switchPanel === 'function') {
+                            self.switchPanel('shop-panel');
                         }
-                    } else {
-                        self.showNotification("Not enough time blocks left!", "error");
-                    }
-                });
-                shopBtn._initialized = true;
-                console.log("Shop button event listener initialized");
-            } else {
-                console.log("Shop button already has event listener");
-            }
-        }
-        
-        var resourcesBtn = document.getElementById('resources-btn');
-        if (resourcesBtn) {
-            // Only set up event listener if it doesn't already have one
-            if (!resourcesBtn._initialized) {
-                resourcesBtn.addEventListener('click', function() {
-                    console.log("Resources button clicked - current time blocks:", self.gameState.getAvailableTimeBlocks());
-                    // Resources panel doesn't consume time blocks
-                    self.switchPanel('resources-panel');
-                    
-                    // Update resources display if resource manager exists
-                    if (self.resourceManager && typeof self.resourceManager.updateResourcesDisplay === 'function') {
-                        self.resourceManager.updateResourcesDisplay();
-                    }
-                });
-                resourcesBtn._initialized = true;
-                console.log("Resources button event listener initialized");
-            } else {
-                console.log("Resources button already has event listener");
-            }
+                    });
+                }
+            });
+            
+            console.log("✅ Main menu buttons set up with robust handlers");
+            return true;
+        } catch (error) {
+            console.error("🔴 Error setting up main menu:", error);
+            return false;
         }
     }
     
@@ -3178,11 +3146,20 @@ export class UI {
         console.log("Ensuring coding panel is visible and initialized...");
         
         try {
+            // Make sure we have a valid reference to the computer screen
+            if (!this.computerScreen) {
+                console.log("Computer screen reference was missing, getting it now");
+                this.computerScreen = document.getElementById('computer-screen');
+            }
+            
             // First check if the computer screen is visible
             if (this.computerScreen && this.computerScreen.classList.contains('hidden')) {
                 this.computerScreen.classList.remove('hidden');
                 this.computerScreen.style.display = 'block';
                 console.log("Computer screen made visible");
+            } else if (!this.computerScreen) {
+                console.error("CRITICAL ERROR: Could not find computer-screen element");
+                return false;
             }
             
             // Get the coding panel
@@ -3216,6 +3193,12 @@ export class UI {
                 this.initCodeSprintListeners();
             } else {
                 console.error("initCodeSprintListeners function not found!");
+            }
+            
+            // Fix the back button functionality
+            if (typeof this.fixCodingPanelBackButton === 'function') {
+                console.log("Fixing coding panel back button");
+                this.fixCodingPanelBackButton();
             }
             
             return true;
@@ -3488,6 +3471,469 @@ export class UI {
             console.log("Debug tools initialized successfully");
         } catch (error) {
             console.error("Error initializing debug tools:", error);
+        }
+    }
+
+    // A direct, guaranteed method to show the Code Sprint panel
+    directShowCodeSprint() {
+        console.log("DIRECT METHOD: Showing Code Sprint panel");
+        
+        try {
+            // 1. Make sure computer screen is visible
+            const computerScreen = document.getElementById('computer-screen');
+            if (computerScreen) {
+                computerScreen.classList.remove('hidden');
+                computerScreen.style.display = 'block';
+            } else {
+                console.error("Computer screen element not found!");
+            }
+            
+            // 2. Hide absolutely all panels by direct ID access
+            const allPanelIds = [
+                'main-menu', 'coding-panel', 'email-panel', 'social-panel', 
+                'hardware-panel', 'shop-panel', 'projects-panel', 'resources-panel'
+            ];
+            
+            allPanelIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.classList.add('hidden');
+                    element.style.display = 'none';
+                }
+            });
+            
+            // 3. Show coding panel
+            const codingPanel = document.getElementById('coding-panel');
+            if (codingPanel) {
+                codingPanel.classList.remove('hidden');
+                codingPanel.style.display = 'block';
+                
+                // 4. Initialize if needed
+                if (typeof this.updateProjectSelection === 'function') {
+                    this.updateProjectSelection();
+                }
+                
+                if (typeof this.initCodeSprintListeners === 'function') {
+                    this.initCodeSprintListeners();
+                }
+                
+                // 5. Fix the back button functionality
+                if (typeof this.fixCodingPanelBackButton === 'function') {
+                    this.fixCodingPanelBackButton();
+                }
+            } else {
+                console.error("Coding panel not found!");
+            }
+            
+            return true;
+        } catch (error) {
+            console.error("Error in directShowCodeSprint:", error);
+            return false;
+        }
+    }
+
+    // COMPREHENSIVE FIX: Dedicated method to fix Code Sprint button
+    fixCodeSprintButton() {
+        // Add this method to window for emergency console access
+        window.emergencyShowCodeSprint = () => {
+            console.log("%c🔧 EMERGENCY CODE SPRINT ACTIVATION 🔧", "background: red; color: white; font-size: 20px;");
+            this._forceShowCodeSprint();
+        };
+        
+        console.log("🔧 Setting up comprehensive Code Sprint button fix...");
+        
+        // Get the button with multiple selectors for redundancy - fix for the jQuery-like selector
+        const codeBtn = document.getElementById('code-btn') || 
+                       document.querySelector('[data-action="code"]') ||
+                       Array.from(document.querySelectorAll('.menu-button')).find(el => el.textContent.includes('Code Sprint'));
+                       
+        if (!codeBtn) {
+            console.error("🔴 CRITICAL: Code Sprint button not found with any selector!");
+            return;
+        }
+        
+        // Remove any existing event listeners by cloning and replacing
+        const newCodeBtn = codeBtn.cloneNode(true);
+        codeBtn.parentNode.replaceChild(newCodeBtn, codeBtn);
+        
+        console.log("🔄 Replaced Code Sprint button to remove old event listeners");
+        
+        // Add our specialized handler
+        const self = this;
+        newCodeBtn.addEventListener('click', function codeBtnFixedHandler(event) {
+            console.log("%c🖱️ Code Sprint button clicked (FIXED HANDLER)", "background: #4CAF50; color: white;");
+            
+            // Stop event propagation to prevent other handlers
+            event.stopPropagation();
+            event.preventDefault();
+            
+            // Check time blocks (with safeguards)
+            if (self.gameState && 
+                typeof self.gameState.getAvailableTimeBlocks === 'function' && 
+                self.gameState.getAvailableTimeBlocks() > 0 && 
+                typeof self.gameState.useTimeBlock === 'function' && 
+                self.gameState.useTimeBlock(1)) {
+                
+                console.log("⏱️ Time block deducted, remaining:", self.gameState.getAvailableTimeBlocks());
+                
+                // Update UI time blocks
+                if (self.timeBlocks) {
+                    self.timeBlocks.textContent = self.gameState.getAvailableTimeBlocks();
+                }
+                
+                // FORCE show coding panel with multiple layers of verification
+                setTimeout(() => self._forceShowCodeSprint(), 0);
+                
+                // Show notification if possible
+                if (typeof self.showNotification === 'function') {
+                    self.showNotification("Started a code sprint! (Used 1 Time Block)", "info");
+                }
+                
+                // Update stats if possible
+                if (typeof self.updateStats === 'function') {
+                    self.updateStats();
+                }
+            } else {
+                console.log("⚠️ Not enough time blocks for Code Sprint");
+                if (typeof self.showNotification === 'function') {
+                    self.showNotification("Not enough time blocks left!", "error");
+                }
+            }
+        });
+        
+        console.log("✅ Fixed Code Sprint button handler installed successfully");
+        return true;
+    }
+    
+    // Private helper: GUARANTEED to show coding panel
+    _forceShowCodeSprint() {
+        console.log("🛠️ FORCING Code Sprint panel to show...");
+        
+        try {
+            // SAFETY: Ensure we have all required elements
+            const computerScreen = document.getElementById('computer-screen');
+            const mainMenu = document.getElementById('main-menu');
+            const codingPanel = document.getElementById('coding-panel');
+            
+            if (!computerScreen) console.error("🔴 Computer screen element missing!");
+            if (!mainMenu) console.error("🔴 Main menu element missing!");
+            if (!codingPanel) console.error("🔴 Coding panel element missing!");
+            
+            // Step 1: Force computer screen visibility with multiple methods
+            if (computerScreen) {
+                // Remove 'hidden' class
+                computerScreen.classList.remove('hidden');
+                // Force display style
+                computerScreen.style.display = 'block';
+                // Force visibility
+                computerScreen.style.visibility = 'visible';
+                // Force opacity
+                computerScreen.style.opacity = '1';
+                // Force pointer events
+                computerScreen.style.pointerEvents = 'auto';
+                
+                console.log("✅ Computer screen forced visible");
+            }
+            
+            // Step 2: Force HIDE all panels using multiple methods
+            document.querySelectorAll('.panel, #main-menu').forEach(panel => {
+                panel.classList.add('hidden');
+                panel.style.display = 'none';
+                panel.style.visibility = 'hidden';
+            });
+            console.log("✅ All panels and main menu forced hidden");
+            
+            // Step 3: Force show coding panel with multiple methods
+            if (codingPanel) {
+                // Remove 'hidden' class
+                codingPanel.classList.remove('hidden');
+                // Force display style
+                codingPanel.style.display = 'block';
+                // Force visibility
+                codingPanel.style.visibility = 'visible';
+                // Force opacity
+                codingPanel.style.opacity = '1';
+                // Force z-index to be on top
+                codingPanel.style.zIndex = '9999';
+                // Force position to be absolute and take full area of computer screen
+                codingPanel.style.position = 'absolute';
+                codingPanel.style.top = '0';
+                codingPanel.style.left = '0';
+                codingPanel.style.width = '100%';
+                codingPanel.style.height = '100%';
+                
+                console.log("✅ Coding panel forced visible");
+                
+                // Step 4: Initialize the coding panel
+                if (typeof this.updateProjectSelection === 'function') {
+                    try {
+                        this.updateProjectSelection();
+                        console.log("✅ Project selection updated");
+                    } catch (e) {
+                        console.error("❌ Error updating project selection:", e);
+                    }
+                }
+                
+                if (typeof this.initCodeSprintListeners === 'function') {
+                    try {
+                        this.initCodeSprintListeners();
+                        console.log("✅ Code Sprint listeners initialized");
+                    } catch (e) {
+                        console.error("❌ Error initializing Code Sprint listeners:", e);
+                    }
+                }
+                
+                // Step 5: Fix the back button functionality
+                if (typeof this.fixCodingPanelBackButton === 'function') {
+                    try {
+                        this.fixCodingPanelBackButton();
+                        console.log("✅ Back button functionality fixed");
+                    } catch (e) {
+                        console.error("❌ Error fixing back button:", e);
+                    }
+                }
+            }
+            
+            // Final success message
+            console.log("%c✅ FORCE SHOW CODE SPRINT COMPLETED", "background: green; color: white; font-size: 16px;");
+            return true;
+        } catch (error) {
+            console.error("🔴 Critical error in _forceShowCodeSprint:", error);
+            
+            // Last resort emergency direct DOM manipulation
+            try {
+                console.log("🚨 Attempting emergency DOM manipulation...");
+                document.getElementById('main-menu').style.display = 'none';
+                document.getElementById('coding-panel').style.display = 'block';
+                console.log("🚨 Emergency DOM manipulation completed");
+            } catch (e) {
+                console.error("💥 Total failure in _forceShowCodeSprint:", e);
+            }
+            
+            return false;
+        }
+    }
+
+    // Dedicated method to fix the Back button from Code Sprint
+    fixCodingPanelBackButton() {
+        console.log("🔧 Setting up comprehensive fix for Code Sprint Back button");
+        
+        // Force reset the computer screen content class
+        const computerScreen = document.getElementById('computer-screen');
+        if (computerScreen) {
+            // Check if the computer screen has the screen-content class
+            const screenContent = computerScreen.querySelector('.screen-content');
+            if (!screenContent) {
+                console.log("⚠️ Computer screen missing proper structure - attempting repair");
+                
+                // Extract all content from the computer screen
+                const content = computerScreen.innerHTML;
+                
+                // Check if we need to reorganize the structure
+                if (!computerScreen.classList.contains('screen-content')) {
+                    // Create a header element if it doesn't exist
+                    if (!computerScreen.querySelector('.screen-header')) {
+                        const header = document.createElement('div');
+                        header.className = 'screen-header';
+                        header.innerHTML = '<div class="close-button" id="close-computer-btn">×</div>';
+                        
+                        // Insert the header at the beginning
+                        computerScreen.insertBefore(header, computerScreen.firstChild);
+                    }
+                    
+                    // Create a content wrapper if needed
+                    if (!computerScreen.querySelector('.screen-content')) {
+                        // Wrap the remaining content in a screen-content div
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'screen-content';
+                        
+                        // Move all child elements except the header to the content div
+                        const header = computerScreen.querySelector('.screen-header');
+                        while (computerScreen.firstChild !== header) {
+                            contentDiv.appendChild(computerScreen.firstChild);
+                        }
+                        Array.from(computerScreen.children).forEach(child => {
+                            if (child !== header) {
+                                contentDiv.appendChild(child);
+                            }
+                        });
+                        
+                        // Add the content div to the computer screen
+                        computerScreen.appendChild(contentDiv);
+                    }
+                }
+            }
+        }
+        
+        // Get the coding panel back button
+        const codingBackBtn = document.getElementById('coding-back-btn');
+        if (!codingBackBtn) {
+            console.error("🔴 CRITICAL: Coding back button not found!");
+            return false;
+        }
+        
+        // Remove existing event listeners by replacing the button
+        const newBackBtn = codingBackBtn.cloneNode(true);
+        codingBackBtn.parentNode.replaceChild(newBackBtn, codingBackBtn);
+        
+        console.log("🔄 Replaced Coding panel back button to remove old event listeners");
+        
+        // Add our specialized handler
+        const self = this;
+        newBackBtn.addEventListener('click', function(event) {
+            console.log("🔙 Coding panel Back button clicked");
+            
+            // Stop event propagation
+            event.stopPropagation();
+            event.preventDefault();
+            
+            // Handle the navigation properly
+            self._safeNavigateBackToMainMenu();
+        });
+        
+        console.log("✅ Fixed Coding panel back button handler installed");
+        return true;
+    }
+    
+    // Completely revamped safe method to navigate back to main menu
+    _safeNavigateBackToMainMenu() {
+        console.log("🔄 COMPLETE RESTORATION: Navigating back to properly formatted main menu");
+        
+        try {
+            // Step 1: Get references to all elements we need to manipulate
+            const computerScreen = document.getElementById('computer-screen');
+            const mainMenu = document.getElementById('main-menu');
+            const codingPanel = document.getElementById('coding-panel');
+            
+            if (!computerScreen) {
+                console.error("🔴 Computer screen element not found!");
+                return false;
+            }
+            
+            if (!mainMenu) {
+                console.error("🔴 Main menu element not found!");
+                return false;
+            }
+            
+            // Step 2: Ensure proper computer screen structure
+            const screenContent = computerScreen.querySelector('.screen-content');
+            if (!screenContent) {
+                console.log("⚠️ Fixing computer screen structure");
+                
+                // Preserve the close button if it exists
+                let closeBtn = computerScreen.querySelector('.close-button, #close-computer-btn');
+                
+                // Clear the computer screen
+                computerScreen.innerHTML = '';
+                
+                // Recreate the header
+                const header = document.createElement('div');
+                header.className = 'screen-header';
+                if (closeBtn) {
+                    header.appendChild(closeBtn);
+                } else {
+                    header.innerHTML = '<div class="close-button" id="close-computer-btn">×</div>';
+                }
+                computerScreen.appendChild(header);
+                
+                // Create a new screen content container
+                const content = document.createElement('div');
+                content.className = 'screen-content';
+                computerScreen.appendChild(content);
+                
+                // Set the main menu as a child of the screen content
+                if (mainMenu) {
+                    content.appendChild(mainMenu);
+                }
+            } else {
+                // Ensure main menu is a child of screen-content
+                if (mainMenu && mainMenu.parentNode !== screenContent) {
+                    screenContent.appendChild(mainMenu);
+                }
+            }
+            
+            // Step 3: Hide ALL panels first to ensure clean state
+            const allPanels = document.querySelectorAll('.panel');
+            allPanels.forEach(panel => {
+                panel.setAttribute('style', ''); // Clear inline styles
+                panel.classList.add('hidden');
+                panel.style.display = 'none';
+            });
+            
+            // Step 4: Reset and show the computer screen
+            computerScreen.style.display = 'block';
+            computerScreen.style.visibility = 'visible';
+            computerScreen.style.opacity = '1';
+            computerScreen.classList.remove('hidden');
+            
+            // Step 5: Reset and properly show the main menu
+            mainMenu.setAttribute('style', ''); // Clear any problematic inline styles
+            mainMenu.className = ''; // Clear any problematic classes
+            mainMenu.id = 'main-menu'; // Ensure ID is correct
+            
+            // Apply proper styling to main menu
+            mainMenu.style.display = 'flex';
+            mainMenu.style.flexDirection = 'column';
+            mainMenu.style.justifyContent = 'center';
+            mainMenu.style.alignItems = 'center';
+            mainMenu.style.gap = '20px';
+            mainMenu.style.padding = '20px';
+            mainMenu.style.height = '100%';
+            
+            // Step 6: Re-initialize all menu buttons to ensure they work
+            this.setupMainMenu();
+            
+            // Step 7: Make sure the scene is visible
+            const sceneContainer = document.getElementById('scene-container');
+            if (sceneContainer) {
+                sceneContainer.style.display = 'block';
+                sceneContainer.style.visibility = 'visible';
+            }
+            
+            // Step 8: Ensure close button works
+            const closeButton = document.getElementById('close-computer-btn');
+            if (closeButton) {
+                const self = this;
+                closeButton.onclick = function() {
+                    computerScreen.classList.add('hidden');
+                    computerScreen.style.display = 'none';
+                };
+            }
+            
+            // Step 9: Force a DOM reflow to ensure changes take effect
+            void mainMenu.offsetWidth;
+            
+            console.log("✅ Main menu fully restored with proper layout and functionality");
+            return true;
+        } catch (error) {
+            console.error("🔴 Error in completely restoring main menu:", error);
+            
+            // Last resort emergency approach - try to get back to any usable state
+            try {
+                console.log("🚨 Attempting emergency reset of ALL UI elements");
+                // Hide everything
+                document.querySelectorAll('.panel, #computer-screen, #main-menu').forEach(el => {
+                    el.style.display = 'none';
+                });
+                
+                // Show main content
+                const computerScreen = document.getElementById('computer-screen');
+                const mainMenu = document.getElementById('main-menu');
+                
+                if (computerScreen) computerScreen.style.display = 'block';
+                if (mainMenu) mainMenu.style.display = 'block';
+                
+                // Try to reinitialize UI completely
+                if (window.game && window.game.ui) {
+                    console.log("🔄 Attempting to reinitialize UI...");
+                    window.game.ui.init();
+                    window.game.ui.setupMainMenu();
+                }
+            } catch (e) {
+                console.error("💥 Total UI restoration failure:", e);
+            }
+            
+            return false;
         }
     }
 } 

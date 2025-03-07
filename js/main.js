@@ -296,16 +296,17 @@ class Game {
         
         // Create basic placeholders
         this.desk = this.assetLoader.createPlaceholder('desk');
-        this.desk.position.y = 0;
+        this.desk.position.y = 0; // Keep at 0 as the model has been adjusted internally
         this.scene.add(this.desk);
         
         this.computer = this.assetLoader.createPlaceholder('computer');
-        this.computer.position.set(0, 0.75, 0);
+        this.computer.position.set(0, 0.75, 0); // Position on top of desk
         this.scene.add(this.computer);
         this.makeInteractive(this.computer, 'computer');
         
         this.chair = this.assetLoader.createPlaceholder('chair');
-        this.chair.position.set(0, 0, 1.5);
+        // Move chair closer to desk (was at z=1.5)
+        this.chair.position.set(0, 0, 0.9);
         this.chair.rotation.y = Math.PI;
         this.scene.add(this.chair);
         
@@ -318,7 +319,7 @@ class Game {
         });
         this.floor = new THREE.Mesh(floorGeometry, floorMaterial);
         this.floor.rotation.x = -Math.PI / 2;
-        this.floor.position.y = -0.1;
+        this.floor.position.y = 0; // Set floor exactly at y=0
         this.floor.receiveShadow = true;
         this.scene.add(this.floor);
         
@@ -347,12 +348,12 @@ class Game {
             // Office desk
             this.desk = this.assetLoader.getModel('desk');
             if (this.desk) {
-                this.desk.position.y = 0;
+                this.desk.position.y = 0; // Keep at 0 as the model should be positioned correctly internally
                 this.scene.add(this.desk);
             } else {
                 console.warn("Desk model not available, using placeholder");
                 this.desk = this.assetLoader.createPlaceholder('desk');
-                this.desk.position.y = 0;
+                this.desk.position.y = 0; // Keep at 0 as the model has been adjusted internally
                 this.scene.add(this.desk);
             }
             
@@ -363,7 +364,7 @@ class Game {
                 this.computer = this.assetLoader.createPlaceholder('computer');
             }
             
-            // Position the computer on the desk
+            // Position the computer on the desk (adjusted for new desk height)
             this.computer.position.set(0, 0.75, 0);
             
             // Explicitly ensure computer has required properties for interaction
@@ -405,7 +406,8 @@ class Game {
                 this.chair = this.assetLoader.createPlaceholder('chair');
             }
             
-            this.chair.position.set(0, 0, 1.5);
+            // Move chair closer to desk (was at z=1.5)
+            this.chair.position.set(0, 0, 0.9);
             this.chair.rotation.y = Math.PI; // Facing the desk
             this.scene.add(this.chair);
             
@@ -418,7 +420,7 @@ class Game {
             });
             this.floor = new THREE.Mesh(floorGeometry, floorMaterial);
             this.floor.rotation.x = -Math.PI / 2;
-            this.floor.position.y = -0.1;
+            this.floor.position.y = 0; // Set floor exactly at y=0
             this.floor.receiveShadow = true;
             this.scene.add(this.floor);
             
@@ -605,15 +607,26 @@ class Game {
     // Add decorative items to the scene
     addDecorativeItems() {
         try {
-            // Potted plant
+            // Potted plant - now placed on the back right corner of the desk
             const plant = this.assetLoader.getModel('plant');
             if (plant) {
                 this.plant = plant;
-                this.plant.position.set(2, 0, -1);
-                this.plant.scale.set(0.5, 0.5, 0.5);
+                // Position the plant on the back right corner of the desk
+                // y = 0.75 is the desk height + a bit more to place bottom of pot on desk
+                // x = 0.6 is the right side of the desk
+                // z = -0.3 is toward the back edge of the desk
+                this.plant.position.set(0.6, 0.75, -0.3);
+                // Make the plant significantly larger
+                this.plant.scale.set(0.8, 0.8, 0.8);
                 this.scene.add(this.plant);
             } else {
-                console.log("Plant model not available, skipping");
+                // If model not available, create a placeholder plant
+                console.log("Plant model not available, creating a placeholder");
+                const plantPlaceholder = this.assetLoader.createPlaceholder('plant');
+                this.plant = plantPlaceholder;
+                this.plant.position.set(0.6, 0.75, -0.3);
+                this.plant.scale.set(0.8, 0.8, 0.8);
+                this.scene.add(this.plant);
             }
             
             // Coffee mug
@@ -1460,6 +1473,24 @@ class Game {
         } catch (error) {
             console.error("Error initializing UI:", error);
         }
+
+        // After a delay, ensure our Code Sprint button fix is applied
+        setTimeout(() => {
+            console.log("🔨 Applying Code Sprint button fix from Game.initializeUI...");
+            if (this.ui && typeof this.ui.fixCodeSprintButton === 'function') {
+                this.ui.fixCodeSprintButton();
+            }
+            
+            // Also add a convenience function to the global scope
+            window.fixCodeSprintButton = () => {
+                console.log("🔧 Manual Code Sprint button fix requested");
+                if (this.ui && typeof this.ui.fixCodeSprintButton === 'function') {
+                    this.ui.fixCodeSprintButton();
+                } else {
+                    console.error("🔴 UI or fixCodeSprintButton method not available");
+                }
+            };
+        }, 1000);
     }
 
     // Add a temporary protection to prevent clicking in the scene from being misinterpreted

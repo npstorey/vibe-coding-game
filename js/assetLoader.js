@@ -164,48 +164,183 @@ export class AssetLoader {
         
         switch (type) {
             case 'desk':
-                const deskGeometry = new THREE.BoxGeometry(1.5, 0.05, 0.8);
-                const deskMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-                const desk = new THREE.Mesh(deskGeometry, deskMaterial);
-                desk.castShadow = true;
-                desk.receiveShadow = true;
-                return desk;
+                const deskGroup = new THREE.Group();
+                
+                // Desk top surface with better dimensions
+                const deskTopGeometry = new THREE.BoxGeometry(1.5, 0.05, 0.8);
+                const deskMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x5c3c2e, // Richer wood color
+                    roughness: 0.7,
+                    metalness: 0.1
+                });
+                const deskTop = new THREE.Mesh(deskTopGeometry, deskMaterial);
+                deskTop.position.y = 0.7;
+                deskTop.castShadow = true;
+                deskTop.receiveShadow = true;
+                deskGroup.add(deskTop);
+                
+                // Add desk legs
+                const legGeometry = new THREE.BoxGeometry(0.05, 0.7, 0.05);
+                const legMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x4a3121, // Slightly darker than desk top
+                    roughness: 0.75,
+                    metalness: 0.1
+                });
+                
+                // Positions for the four legs
+                const legPositions = [
+                    [-0.7, 0.35, 0.35],  // Front left
+                    [0.7, 0.35, 0.35],   // Front right
+                    [-0.7, 0.35, -0.35], // Back left
+                    [0.7, 0.35, -0.35]   // Back right
+                ];
+                
+                legPositions.forEach(pos => {
+                    const leg = new THREE.Mesh(legGeometry, legMaterial);
+                    leg.position.set(pos[0], pos[1], pos[2]);
+                    leg.castShadow = true;
+                    deskGroup.add(leg);
+                });
+                
+                // Add a drawer unit on the right side - properly aligned with desk dimensions
+                // Desk is 1.5 wide, 0.8 deep, drawer should be contained within these dimensions
+                const drawerUnitGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.6);
+                const drawerUnitMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x5c3c2e,
+                    roughness: 0.7,
+                    metalness: 0.1
+                });
+                const drawerUnit = new THREE.Mesh(drawerUnitGeometry, drawerUnitMaterial);
+                // Position drawer to properly align with desk edge (desk width is 1.5, depth is 0.8)
+                // Desk extends from -0.75 to 0.75 in x and -0.4 to 0.4 in z
+                drawerUnit.position.set(0.5, 0.5, 0.0);
+                drawerUnit.castShadow = true;
+                deskGroup.add(drawerUnit);
+                
+                // Add drawer handles
+                const handleGeometry = new THREE.BoxGeometry(0.1, 0.01, 0.03);
+                const drawerHandleMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x888888,
+                    roughness: 0.5,
+                    metalness: 0.8
+                });
+                
+                // Add three drawer handles facing towards the chair
+                for (let i = 0; i < 3; i++) {
+                    const handle = new THREE.Mesh(handleGeometry, drawerHandleMaterial);
+                    // Position handles at the front of the drawer unit
+                    handle.position.set(0.5, 0.6 - (i * 0.15), 0.3);
+                    handle.castShadow = true;
+                    deskGroup.add(handle);
+                }
+                
+                // Create a subtle wood grain texture using an emissive map
+                const edgeHighlightGeometry = new THREE.PlaneGeometry(1.48, 0.78);
+                const edgeHighlightMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x5c3c2e,
+                    emissive: 0x2a1a0c,
+                    emissiveIntensity: 0.1,
+                    transparent: true,
+                    opacity: 0.3,
+                    roughness: 0.9
+                });
+                const edgeHighlight = new THREE.Mesh(edgeHighlightGeometry, edgeHighlightMaterial);
+                edgeHighlight.rotation.x = -Math.PI / 2;
+                edgeHighlight.position.y = 0.726;
+                edgeHighlight.position.z = 0;
+                deskGroup.add(edgeHighlight);
+                
+                return deskGroup;
                 
             case 'chair':
                 const chairGroup = new THREE.Group();
                 
-                // Chair seat
-                const seatGeometry = new THREE.BoxGeometry(0.5, 0.05, 0.5);
-                const seatMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                // Chair base with wheels
+                const chairBaseGeometry = new THREE.CylinderGeometry(0.2, 0.25, 0.05, 16);
+                const chairBaseMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+                const chairBase = new THREE.Mesh(chairBaseGeometry, chairBaseMaterial);
+                chairBase.position.y = 0.025;
+                chairBase.castShadow = true;
+                chairGroup.add(chairBase);
+                
+                // Center pillar
+                const pillarGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8);
+                const pillarMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+                pillar.position.y = 0.225;
+                pillar.castShadow = true;
+                chairGroup.add(pillar);
+                
+                // Chair seat (gaming style - thicker with curved edges)
+                const seatGeometry = new THREE.BoxGeometry(0.5, 0.08, 0.5);
+                const seatMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x0055ff, // Blue color
+                    roughness: 0.7,
+                    metalness: 0.2
+                });
                 const seat = new THREE.Mesh(seatGeometry, seatMaterial);
+                seat.position.y = 0.425;
                 seat.castShadow = true;
                 chairGroup.add(seat);
                 
-                // Chair back
-                const backGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.05);
-                const backMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+                // Chair back (taller, curved for gaming chair)
+                const backGeometry = new THREE.BoxGeometry(0.5, 0.7, 0.08);
+                const backMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x0055ff, // Blue color
+                    roughness: 0.7,
+                    metalness: 0.2
+                });
                 const back = new THREE.Mesh(backGeometry, backMaterial);
-                back.position.set(0, 0.275, -0.225);
+                back.position.set(0, 0.775, -0.25);
                 back.castShadow = true;
                 chairGroup.add(back);
                 
-                // Chair legs
-                const legGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 8);
-                const legMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
-                
-                const positions = [
-                    [-0.2, -0.2, 0.2],  // Front left
-                    [0.2, -0.2, 0.2],   // Front right
-                    [-0.2, -0.2, -0.2], // Back left
-                    [0.2, -0.2, -0.2]   // Back right
-                ];
-                
-                positions.forEach(pos => {
-                    const leg = new THREE.Mesh(legGeometry, legMaterial);
-                    leg.position.set(pos[0], -0.2, pos[1]);
-                    leg.castShadow = true;
-                    chairGroup.add(leg);
+                // Racing stripes (for gaming chair effect)
+                const stripeGeometry = new THREE.BoxGeometry(0.1, 0.65, 0.09);
+                const stripeMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x000000, // Black stripes
+                    roughness: 0.8
                 });
+                
+                // Left stripe
+                const leftStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+                leftStripe.position.set(-0.15, 0.775, -0.25);
+                chairGroup.add(leftStripe);
+                
+                // Right stripe
+                const rightStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+                rightStripe.position.set(0.15, 0.775, -0.25);
+                chairGroup.add(rightStripe);
+                
+                // Headrest
+                const headrestGeometry = new THREE.BoxGeometry(0.4, 0.15, 0.1);
+                const headrestMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x0055ff, // Blue color
+                    roughness: 0.7,
+                    metalness: 0.2
+                });
+                const headrest = new THREE.Mesh(headrestGeometry, headrestMaterial);
+                headrest.position.set(0, 1.105, -0.25);
+                headrest.castShadow = true;
+                chairGroup.add(headrest);
+                
+                // Wheels
+                const wheelGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.02, 8);
+                wheelGeometry.rotateX(Math.PI / 2);
+                const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+                
+                // Add 5 wheels in a star pattern
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i / 5) * Math.PI * 2;
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.position.set(
+                        Math.cos(angle) * 0.2,
+                        0.005, // Just barely above the ground
+                        Math.sin(angle) * 0.2
+                    );
+                    wheel.castShadow = true;
+                    chairGroup.add(wheel);
+                }
                 
                 return chairGroup;
                 
@@ -372,21 +507,83 @@ export class AssetLoader {
                 return shelfGroup;
                 
             case 'plant':
-                // Simple plant placeholder
+                // More realistic plant placeholder
                 const plantGroup = new THREE.Group();
                 
-                // Pot
-                const potGeometry = new THREE.CylinderGeometry(0.1, 0.08, 0.12, 16);
-                const potMaterial = new THREE.MeshStandardMaterial({ color: 0x8D6E63 });
-                const pot = new THREE.Mesh(potGeometry, potMaterial);
-                plantGroup.add(pot);
+                // Pot - more detailed with rim
+                const potBaseGeometry = new THREE.CylinderGeometry(0.08, 0.06, 0.12, 16);
+                const potMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x8D6E63, 
+                    roughness: 0.8,
+                    metalness: 0.1
+                });
+                const potBase = new THREE.Mesh(potBaseGeometry, potMaterial);
+                plantGroup.add(potBase);
                 
-                // Plant/Leaves (simplified as spheres)
-                const leafGeometry = new THREE.SphereGeometry(0.15, 16, 8);
-                const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
-                const leaves = new THREE.Mesh(leafGeometry, leafMaterial);
-                leaves.position.y = 0.15;
-                plantGroup.add(leaves);
+                // Pot rim
+                const potRimGeometry = new THREE.TorusGeometry(0.08, 0.01, 8, 16);
+                const potRimMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x6D4C41,
+                    roughness: 0.7,
+                    metalness: 0.2
+                });
+                const potRim = new THREE.Mesh(potRimGeometry, potRimMaterial);
+                potRim.rotation.x = Math.PI / 2;
+                potRim.position.y = 0.06;
+                plantGroup.add(potRim);
+                
+                // Soil
+                const soilGeometry = new THREE.CylinderGeometry(0.07, 0.07, 0.01, 16);
+                const soilMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x3E2723,
+                    roughness: 1.0,
+                    metalness: 0.0
+                });
+                const soil = new THREE.Mesh(soilGeometry, soilMaterial);
+                soil.position.y = 0.06;
+                plantGroup.add(soil);
+                
+                // Create main stem
+                const plantStemGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.15, 8);
+                const plantStemMaterial = new THREE.MeshStandardMaterial({ color: 0x33691E });
+                const plantStem = new THREE.Mesh(plantStemGeometry, plantStemMaterial);
+                plantStem.position.y = 0.14;
+                plantGroup.add(plantStem);
+                
+                // Create multiple leaves with different shapes and sizes
+                const createLeaf = (size, height, angle, x, z, colorShade) => {
+                    // Use a cone for sharper, more detailed leaves
+                    const leafGeometry = new THREE.ConeGeometry(size, height, 8);
+                    const leafMaterial = new THREE.MeshStandardMaterial({ 
+                        color: colorShade,
+                        roughness: 0.8,
+                        metalness: 0.1,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
+                    // Rotate the leaf to point upward with some variation
+                    leaf.rotation.x = Math.PI + (Math.random() * 0.2 - 0.1);
+                    leaf.rotation.z = angle;
+                    leaf.position.set(x, height/2 + 0.07, z);
+                    return leaf;
+                };
+                
+                // Add several leaves with varied shades of green
+                const leafColors = [
+                    0x2E7D32, // Dark green
+                    0x388E3C, // Medium green
+                    0x43A047, // Light green
+                    0x66BB6A, // Lighter green
+                ];
+                
+                // Add multiple leaves in a more natural arrangement
+                plantGroup.add(createLeaf(0.05, 0.15, 0.3, 0.03, 0.03, leafColors[0]));
+                plantGroup.add(createLeaf(0.04, 0.12, -0.5, -0.03, 0.02, leafColors[1]));
+                plantGroup.add(createLeaf(0.05, 0.14, 1.0, 0.02, -0.04, leafColors[2]));
+                plantGroup.add(createLeaf(0.04, 0.13, -1.5, -0.02, -0.03, leafColors[3]));
+                plantGroup.add(createLeaf(0.05, 0.16, 2.0, 0.0, 0.05, leafColors[0]));
+                plantGroup.add(createLeaf(0.04, 0.11, -2.5, -0.04, -0.01, leafColors[2]));
                 
                 return plantGroup;
                 
